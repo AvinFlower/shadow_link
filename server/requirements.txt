@@ -1,0 +1,8 @@
+flask
+psycopg2-binary
+Flask-SQLAlchemy
+flask-cors
+Flask-CORS
+flask-login
+werkzeug
+datetime

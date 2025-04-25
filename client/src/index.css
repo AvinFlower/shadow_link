@@ -1,0 +1,54 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@layer base {
+  * {
+    @apply border-border;
+  }
+
+  body {
+    @apply font-sans antialiased bg-background text-foreground;
+  }
+
+  /* Matrix animation */
+  @keyframes matrix-fall {
+    0% { 
+      transform: translateY(-100%);
+      opacity: 0; 
+    }
+    10% {
+      opacity: 1;
+    }
+    90% {
+      opacity: 1;
+    }
+    100% { 
+      transform: translateY(1000%);
+      opacity: 0;
+    }
+  }
+
+  /* Remove flickering fade-in animations */
+  .animate-matrix {
+    animation: matrix-fall 10s linear infinite;
+  }
+  
+  /* Make text more visible */
+  h1, h2, h3, h4, h5, h6, p, span, a, button, li {
+    @apply text-white font-medium;
+  }
+  
+  .text-muted-foreground {
+    @apply text-gray-300 !important;
+  }
+  
+  /* Increase contrast for better readability */
+  .bg-card {
+    @apply bg-black/40 backdrop-blur-sm;
+  }
+  
+  .bg-background {
+    @apply bg-black;
+  }
+}
