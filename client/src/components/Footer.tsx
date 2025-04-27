@@ -7,24 +7,24 @@ const Footer: React.FC = () => {
   const year = new Date().getFullYear();
   
   const companyLinks = [
-    { name: 'About Us', href: '#' },
-    { name: 'Blog', href: '#' },
-    { name: 'Careers', href: '#' },
-    { name: 'Press Kit', href: '#' }
+    { name: 'О нас', href: '#' },
+    { name: 'Блог', href: '#' },
+    { name: 'Вакансии', href: '#' },
+    { name: 'Пресс-кит', href: '#' }
   ];
   
   const supportLinks = [
-    { name: 'Help Center', href: '#' },
-    { name: 'Knowledge Base', href: '#' },
-    { name: 'System Status', href: '#' },
-    { name: 'Contact Support', href: '#' }
+    { name: 'Центр поддержки', href: '#' },
+    { name: 'База знаний', href: '#' },
+    { name: 'Статус системы', href: '#' },
+    { name: 'Контакт с поддержкой', href: '#' }
   ];
   
   const legalLinks = [
-    { name: 'Terms of Service', href: '#' },
-    { name: 'Privacy Policy', href: '#' },
-    { name: 'Cookie Policy', href: '#' },
-    { name: 'Acceptable Use', href: '#' }
+    { name: 'Условия использования', href: '#' },
+    { name: 'Политика конфиденциальности', href: '#' },
+    { name: 'Политика использования файлов cookie', href: '#' },
+    { name: 'Допустимое использование', href: '#' }
   ];
   
   const socialLinks = [
@@ -43,15 +43,15 @@ const Footer: React.FC = () => {
               <Logo />
             </div>
             <p className="text-muted-foreground mb-6">
-              Secure and anonymous proxy services for individuals and businesses worldwide.
+              Надежные и анонимные прокси-сервисы для частных лиц и бизнеса по всему миру.
             </p>
             <p className="text-muted-foreground text-sm">
-              &copy; {year} Shadowlink. All rights reserved.
+              &copy; {year} Shadowlink. Все права защищены.
             </p>
           </div>
           
           <div>
-            <h4 className="text-lg font-semibold mb-4">Company</h4>
+            <h4 className="text-lg font-semibold mb-4">Компания</h4>
             <ul className="space-y-2">
               {companyLinks.map((link, index) => (
                 <li key={index}>
@@ -66,7 +66,7 @@ const Footer: React.FC = () => {
           </div>
           
           <div>
-            <h4 className="text-lg font-semibold mb-4">Support</h4>
+            <h4 className="text-lg font-semibold mb-4">Поддержка</h4>
             <ul className="space-y-2">
               {supportLinks.map((link, index) => (
                 <li key={index}>
@@ -81,7 +81,7 @@ const Footer: React.FC = () => {
           </div>
           
           <div>
-            <h4 className="text-lg font-semibold mb-4">Legal</h4>
+            <h4 className="text-lg font-semibold mb-4">Правовые вопросы</h4>
             <ul className="space-y-2">
               {legalLinks.map((link, index) => (
                 <li key={index}>
@@ -102,7 +102,7 @@ const Footer: React.FC = () => {
                     key={index}
                     href={link.href}
                     className="bg-primary/20 hover:bg-primary/30 p-3 rounded-full transition duration-300"
-                    aria-label={`Social link ${index + 1}`}
+                    aria-label={`Социальная сеть ${index + 1}`}
                   >
                     <Icon className="h-5 w-5 text-primary" />
                   </a>

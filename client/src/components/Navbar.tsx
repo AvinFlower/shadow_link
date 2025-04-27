@@ -20,10 +20,10 @@ const Navbar: React.FC = () => {
   const { user, logoutMutation } = useAuth();
 
   const navLinks = [
-    { name: 'Features', href: '/features' },
-    { name: 'Pricing', href: '/pricing' },
-    { name: 'Contact', href: '/contact' }
-  ];
+    { name: 'Особенности', href: '/features' },
+    { name: 'Цены', href: '/pricing' },
+    { name: 'Контакты', href: '/contact' }
+  ];  
 
   const toggleMobileMenu = () => {
     setMobileMenuOpen(!mobileMenuOpen);

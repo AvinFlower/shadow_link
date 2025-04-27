@@ -36,7 +36,7 @@ const PricingCard: React.FC<PricingCardProps> = ({
     >
       {popular && (
         <div className="absolute top-0 right-0 bg-primary text-primary-foreground px-4 py-1 rounded-bl-lg rounded-tr-lg font-medium text-sm">
-          MOST POPULAR
+          НАИБОЛЕЕ ПОПУЛЯРНЫЙ
         </div>
       )}
       
@@ -44,7 +44,7 @@ const PricingCard: React.FC<PricingCardProps> = ({
         <h3 className="text-xl font-semibold mb-2">{title}</h3>
         <div className="flex justify-center items-end">
           <span className="text-4xl font-bold">{price}</span>
-          <span className="text-muted-foreground ml-1">/month</span>
+          <span className="text-muted-foreground ml-1">/месяц</span>
         </div>
       </div>
       
@@ -65,7 +65,7 @@ const PricingCard: React.FC<PricingCardProps> = ({
             : "border-primary text-primary hover:bg-card"
         } font-medium rounded-full px-6 py-3`}
       >
-        Choose Plan
+        Выбрать план
       </Button>
     </motion.div>
   );

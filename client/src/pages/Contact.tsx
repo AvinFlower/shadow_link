@@ -5,43 +5,43 @@ import { Mail, Phone, MessageSquare, MapPin, Clock, Users } from 'lucide-react';
 import { Separator } from '@/components/ui/separator';
 
 const Contact: React.FC = () => {
-  // Contact info with more details
+  // Информация для связи с подробностями
   const contactInfo = [
     {
       icon: Mail,
-      title: 'Email Us',
+      title: 'Напишите нам',
       description: 'support@shadowlink.com',
-      details: 'We typically respond within 24 hours'
+      details: 'Обычно отвечаем в течение 24 часов'
     },
     {
       icon: Phone,
-      title: 'Call Us',
+      title: 'Позвоните нам',
       description: '+1 (555) 123-4567',
-      details: 'Mon-Fri, 9am-5pm EST'
+      details: 'Пн-Пт, 9:00-17:00 по восточному времени'
     },
     {
       icon: MessageSquare,
-      title: 'Live Chat',
-      description: 'Available 24/7 for instant support',
-      details: 'Average response time: 2 minutes'
+      title: 'Живой чат',
+      description: 'Доступен 24/7 для мгновенной поддержки',
+      details: 'Среднее время ответа: 2 минуты'
     }
   ];
 
-  // Office locations
+  // Офисные локации
   const officeLocations = [
     {
-      city: 'New York',
-      address: '123 Tech Plaza, Suite 400, New York, NY 10001',
+      city: 'Нью-Йорк',
+      address: '123 Tech Plaza, Suite 400, Нью-Йорк, NY 10001',
       phone: '+1 (555) 123-4567'
     },
     {
-      city: 'London',
-      address: '456 Digital Avenue, Floor 3, London, UK EC2A 1AB',
+      city: 'Лондон',
+      address: '456 Digital Avenue, Floor 3, Лондон, Великобритания EC2A 1AB',
       phone: '+44 20 1234 5678'
     },
     {
-      city: 'Singapore',
-      address: '789 Cyber Street, #10-01, Singapore 049315',
+      city: 'Сингапур',
+      address: '789 Cyber Street, #10-01, Сингапур 049315',
       phone: '+65 6123 4567'
     }
   ];
@@ -55,9 +55,9 @@ const Contact: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Get in <span className="text-primary">Touch</span></h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">Свяжитесь с <span className="text-primary">нами</span></h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Have questions about our services? Our team is ready to assist you with anything you need.
+            Есть вопросы о наших услугах? Наша команда готова помочь вам в любое время.
           </p>
         </motion.div>
         
@@ -89,7 +89,7 @@ const Contact: React.FC = () => {
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.4 }}
             >
-              <h3 className="text-xl font-semibold mb-4">Office Locations</h3>
+              <h3 className="text-xl font-semibold mb-4">Офисы</h3>
               <div className="space-y-6">
                 {officeLocations.map((location, index) => (
                   <div key={index} className="flex">
@@ -112,16 +112,16 @@ const Contact: React.FC = () => {
               transition={{ duration: 0.5, delay: 0.6 }}
               className="mt-8"
             >
-              <h3 className="text-xl font-semibold mb-4">Business Hours</h3>
+              <h3 className="text-xl font-semibold mb-4">Рабочие часы</h3>
               <div className="flex mb-2">
                 <Clock className="h-5 w-5 text-primary mr-4" />
                 <div>
-                  <p className="text-foreground">Monday - Friday: 9:00 AM - 5:00 PM EST</p>
-                  <p className="text-foreground">Saturday - Sunday: Closed</p>
+                  <p className="text-foreground">Понедельник - Пятница: 9:00 AM - 5:00 PM EST</p>
+                  <p className="text-foreground">Суббота - Воскресенье: Закрыто</p>
                 </div>
               </div>
               <p className="text-muted-foreground mt-2">
-                * Technical support is available 24/7 through our live chat and email.
+                * Техническая поддержка доступна 24/7 через наш живой чат и email.
               </p>
             </motion.div>
           </div>
@@ -140,37 +140,37 @@ const Contact: React.FC = () => {
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
         >
-          <h2 className="text-2xl md:text-3xl font-bold mb-4">Frequently Asked Questions</h2>
+          <h2 className="text-2xl md:text-3xl font-bold mb-4">Часто задаваемые вопросы</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto mb-8">
-            Find quick answers to common questions about our proxy services.
+            Найдите быстрые ответы на часто задаваемые вопросы о наших прокси-сервисах.
           </p>
           
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6 text-left max-w-4xl mx-auto">
             <div className="bg-card p-6 rounded-lg border border-border">
-              <h3 className="font-semibold mb-2">How do I get started with Shadowlink?</h3>
+              <h3 className="font-semibold mb-2">Как начать работу с Shadowlink?</h3>
               <p className="text-muted-foreground">
-                Simply select a plan that suits your needs, create an account, and complete the payment process. Your proxies will be provisioned instantly.
+                Просто выберите план, который соответствует вашим потребностям, создайте аккаунт и завершите процесс оплаты. Ваши прокси будут предоставлены мгновенно.
               </p>
             </div>
             
             <div className="bg-card p-6 rounded-lg border border-border">
-              <h3 className="font-semibold mb-2">Are your proxies compatible with all websites?</h3>
+              <h3 className="font-semibold mb-2">Совместимы ли ваши прокси с любыми сайтами?</h3>
               <p className="text-muted-foreground">
-                Our proxies work with most websites and online services. For specialized needs, contact our support team for custom configurations.
+                Наши прокси работают с большинством сайтов и онлайн-сервисов. Для специализированных нужд свяжитесь с нашей службой поддержки для настройки.
               </p>
             </div>
             
             <div className="bg-card p-6 rounded-lg border border-border">
-              <h3 className="font-semibold mb-2">What payment methods do you accept?</h3>
+              <h3 className="font-semibold mb-2">Какие способы оплаты вы принимаете?</h3>
               <p className="text-muted-foreground">
-                We accept all major credit cards, PayPal, and cryptocurrency payments including Bitcoin, Ethereum, and Litecoin.
+                Мы принимаем все основные кредитные карты, PayPal, а также криптовалюты, включая Bitcoin, Ethereum и Litecoin.
               </p>
             </div>
             
             <div className="bg-card p-6 rounded-lg border border-border">
-              <h3 className="font-semibold mb-2">Can I upgrade my plan later?</h3>
+              <h3 className="font-semibold mb-2">Могу ли я обновить свой план позже?</h3>
               <p className="text-muted-foreground">
-                Yes, you can upgrade your plan at any time. We'll prorate the cost based on your remaining subscription period.
+                Да, вы можете обновить план в любое время. Мы пропорционально пересчитаем стоимость в зависимости от оставшегося периода подписки.
               </p>
             </div>
           </div>
@@ -184,12 +184,12 @@ const Contact: React.FC = () => {
           transition={{ duration: 0.5 }}
         >
           <Users className="h-12 w-12 text-primary mx-auto mb-6" />
-          <h2 className="text-2xl md:text-3xl font-bold mb-4">Enterprise Solutions</h2>
+          <h2 className="text-2xl md:text-3xl font-bold mb-4">Решения для бизнеса</h2>
           <p className="text-muted-foreground max-w-2xl mx-auto mb-6">
-            Need a custom solution for your organization? Our team can create a tailored package that meets your specific requirements.
+            Нужен индивидуальный пакет для вашей организации? Наша команда может создать решение, соответствующее вашим требованиям.
           </p>
           <p className="text-lg font-medium">
-            Contact our enterprise sales team: <span className="text-primary">enterprise@shadowlink.com</span>
+            Свяжитесь с нашей командой по корпоративным продажам: <span className="text-primary">enterprise@shadowlink.com</span>
           </p>
         </motion.div>
       </div>

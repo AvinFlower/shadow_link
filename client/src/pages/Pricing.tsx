@@ -5,99 +5,99 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Check } from 'lucide-react';
 
 const Pricing: React.FC = () => {
-  // Monthly pricing plans
+  // Планы по месячной подписке
   const monthlyPlans = [
     {
-      title: 'Basic',
+      title: 'Базовый',
       price: '$9',
       features: [
-        { name: '5 Private Proxies' },
-        { name: '10 Countries' },
-        { name: '1GB Bandwidth/day' },
-        { name: 'Email Support' }
+        { name: '5 частных прокси' },
+        { name: '10 стран' },
+        { name: '1 ГБ трафика/день' },
+        { name: 'Поддержка по электронной почте' }
       ],
       popular: false
     },
     {
-      title: 'Professional',
+      title: 'Профессиональный',
       price: '$19',
       features: [
-        { name: '20 Private Proxies' },
-        { name: '30 Countries' },
-        { name: '5GB Bandwidth/day' },
-        { name: 'Priority Support' },
-        { name: 'Proxy Rotation' }
+        { name: '20 частных прокси' },
+        { name: '30 стран' },
+        { name: '5 ГБ трафика/день' },
+        { name: 'Приоритетная поддержка' },
+        { name: 'Ротация прокси' }
       ],
       popular: true
     },
     {
-      title: 'Enterprise',
+      title: 'Корпоративный',
       price: '$49',
       features: [
-        { name: '100 Private Proxies' },
-        { name: '50+ Countries' },
-        { name: 'Unlimited Bandwidth' },
-        { name: '24/7 Dedicated Support' },
-        { name: 'Advanced Security Features' }
+        { name: '100 частных прокси' },
+        { name: '50+ стран' },
+        { name: 'Неограниченный трафик' },
+        { name: 'Круглосуточная поддержка' },
+        { name: 'Продвинутые функции безопасности' }
       ],
       popular: false
     }
   ];
 
-  // Yearly pricing plans (with discount)
+  // Планы по годовой подписке (со скидкой)
   const yearlyPlans = [
     {
-      title: 'Basic',
+      title: 'Базовый',
       price: '$90',
       features: [
-        { name: '5 Private Proxies' },
-        { name: '10 Countries' },
-        { name: '1GB Bandwidth/day' },
-        { name: 'Email Support' },
-        { name: '2 Months Free' }
+        { name: '5 частных прокси' },
+        { name: '10 стран' },
+        { name: '1 ГБ трафика/день' },
+        { name: 'Поддержка по электронной почте' },
+        { name: '2 месяца бесплатно' }
       ],
       popular: false
     },
     {
-      title: 'Professional',
+      title: 'Профессиональный',
       price: '$190',
       features: [
-        { name: '20 Private Proxies' },
-        { name: '30 Countries' },
-        { name: '5GB Bandwidth/day' },
-        { name: 'Priority Support' },
-        { name: 'Proxy Rotation' },
-        { name: '2 Months Free' }
+        { name: '20 частных прокси' },
+        { name: '30 стран' },
+        { name: '5 ГБ трафика/день' },
+        { name: 'Приоритетная поддержка' },
+        { name: 'Ротация прокси' },
+        { name: '2 месяца бесплатно' }
       ],
       popular: true
     },
     {
-      title: 'Enterprise',
+      title: 'Корпоративный',
       price: '$490',
       features: [
-        { name: '100 Private Proxies' },
-        { name: '50+ Countries' },
-        { name: 'Unlimited Bandwidth' },
-        { name: '24/7 Dedicated Support' },
-        { name: 'Advanced Security Features' },
-        { name: '2 Months Free' }
+        { name: '100 частных прокси' },
+        { name: '50+ стран' },
+        { name: 'Неограниченный трафик' },
+        { name: 'Круглосуточная поддержка' },
+        { name: 'Продвинутые функции безопасности' },
+        { name: '2 месяца бесплатно' }
       ],
       popular: false
     }
   ];
 
-  // Compare features
+  // Сравнение функций
   const compareFeatures = [
-    { name: 'Private Proxies', basic: '5', pro: '20', enterprise: '100' },
-    { name: 'Countries', basic: '10', pro: '30', enterprise: '50+' },
-    { name: 'Bandwidth', basic: '1GB/day', pro: '5GB/day', enterprise: 'Unlimited' },
-    { name: 'Support', basic: 'Email', pro: 'Priority', enterprise: '24/7 Dedicated' },
-    { name: 'Proxy Rotation', basic: false, pro: true, enterprise: true },
-    { name: 'API Access', basic: false, pro: true, enterprise: true },
-    { name: 'Dedicated IPs', basic: false, pro: true, enterprise: true },
-    { name: 'IP Authentication', basic: true, pro: true, enterprise: true },
-    { name: 'Multiple Subnets', basic: false, pro: true, enterprise: true },
-    { name: 'Advanced Security', basic: false, pro: false, enterprise: true }
+    { name: 'Частные прокси', basic: '5', pro: '20', enterprise: '100' },
+    { name: 'Страны', basic: '10', pro: '30', enterprise: '50+' },
+    { name: 'Трафик', basic: '1 ГБ/день', pro: '5 ГБ/день', enterprise: 'Неограниченно' },
+    { name: 'Поддержка', basic: 'Электронная почта', pro: 'Приоритетная', enterprise: 'Круглосуточная' },
+    { name: 'Ротация прокси', basic: false, pro: true, enterprise: true },
+    { name: 'API доступ', basic: false, pro: true, enterprise: true },
+    { name: 'Выделенные IP-адреса', basic: false, pro: true, enterprise: true },
+    { name: 'Аутентификация по IP', basic: true, pro: true, enterprise: true },
+    { name: 'Несколько подсетей', basic: false, pro: true, enterprise: true },
+    { name: 'Продвинутая безопасность', basic: false, pro: false, enterprise: true }
   ];
 
   return (
@@ -109,17 +109,17 @@ const Pricing: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Simple, Transparent <span className="text-primary">Pricing</span></h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">Простое и прозрачное <span className="text-primary">ценообразование</span></h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Choose the plan that's right for you. No hidden fees, no complicated terms, and full feature access on all plans.
+            Выберите план, который вам подходит. Без скрытых платежей, без сложных условий и полный доступ ко всем функциям на всех планах.
           </p>
         </motion.div>
         
         <Tabs defaultValue="monthly" className="w-full mb-16">
           <div className="flex justify-center mb-8">
             <TabsList className="grid w-64 grid-cols-2">
-              <TabsTrigger value="monthly">Monthly</TabsTrigger>
-              <TabsTrigger value="yearly">Yearly (Save 16%)</TabsTrigger>
+              <TabsTrigger value="monthly">Месячный</TabsTrigger>
+              <TabsTrigger value="yearly">Годовой</TabsTrigger>
             </TabsList>
           </div>
           
@@ -161,16 +161,16 @@ const Pricing: React.FC = () => {
           transition={{ duration: 0.5, delay: 0.2 }}
           className="mt-16"
         >
-          <h2 className="text-2xl md:text-3xl font-bold mb-8 text-center">Compare Plans</h2>
+          <h2 className="text-2xl md:text-3xl font-bold mb-8 text-center">Сравнение планов</h2>
           
           <div className="overflow-x-auto">
             <table className="w-full border-collapse">
               <thead>
                 <tr className="border-b border-border">
-                  <th className="py-4 px-6 text-left">Feature</th>
-                  <th className="py-4 px-6 text-center">Basic</th>
-                  <th className="py-4 px-6 text-center">Professional</th>
-                  <th className="py-4 px-6 text-center">Enterprise</th>
+                  <th className="py-4 px-6 text-left">Особенности</th>
+                  <th className="py-4 px-6 text-center">Базовый</th>
+                  <th className="py-4 px-6 text-center">Профессиональный</th>
+                  <th className="py-4 px-6 text-center">Корпоративный</th>
                 </tr>
               </thead>
               <tbody>
@@ -209,10 +209,10 @@ const Pricing: React.FC = () => {
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
         >
-          <h2 className="text-2xl font-bold mb-4">Need a custom solution?</h2>
+          <h2 className="text-2xl font-bold mb-4">Нужна индивидуальная настройка?</h2>
           <p className="text-muted-foreground mb-6 max-w-2xl mx-auto">
-            We offer tailored proxy packages for businesses with specific requirements. 
-            Contact our sales team to discuss your needs.
+            Мы предлагаем индивидуальные пакеты прокси для бизнеса с особыми требованиями.
+            Свяжитесь с нашей командой продаж, чтобы обсудить ваши нужды.
           </p>
           <div className="text-primary font-semibold">
             sales@shadowlink.com | +1 (555) 987-6543

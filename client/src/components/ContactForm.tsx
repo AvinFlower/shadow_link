@@ -11,10 +11,10 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@
 import { useToast } from '@/hooks/use-toast';
 
 const formSchema = z.object({
-  name: z.string().min(2, { message: 'Name must be at least 2 characters' }),
-  email: z.string().email({ message: 'Please enter a valid email address' }),
-  subject: z.string().min(1, { message: 'Please select a subject' }),
-  message: z.string().min(10, { message: 'Message must be at least 10 characters' })
+  name: z.string().min(2, { message: 'Имя должно содержать хотя бы 2 символа' }),
+  email: z.string().email({ message: 'Пожалуйста, введите правильный адрес электронной почты' }),
+  subject: z.string().min(1, { message: 'Пожалуйста, выберите тему' }),
+  message: z.string().min(10, { message: 'Сообщение должно содержать хотя бы 10 символов' })
 });
 
 type ContactFormValues = z.infer<typeof formSchema>;
@@ -35,8 +35,8 @@ const ContactForm: React.FC = () => {
   function onSubmit(data: ContactFormValues) {
     console.log(data);
     toast({
-      title: "Message Sent",
-      description: "Thank you for your message. We'll get back to you soon.",
+      title: "Сообщение отправлено",
+      description: "Спасибо за ваше сообщение. Мы свяжемся с вами в ближайшее время.",
     });
     form.reset();
   }
@@ -49,7 +49,7 @@ const ContactForm: React.FC = () => {
       transition={{ duration: 0.5 }}
       className="bg-background p-8 rounded-xl border border-border"
     >
-      <h3 className="text-xl font-semibold mb-6">Send Us a Message</h3>
+      <h3 className="text-xl font-semibold mb-6">Отправьте нам сообщение</h3>
       
       <Form {...form}>
         <form onSubmit={form.handleSubmit(onSubmit)} className="space-y-4">
@@ -58,10 +58,10 @@ const ContactForm: React.FC = () => {
             name="name"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Your Name</FormLabel>
+                <FormLabel>Ваше имя</FormLabel>
                 <FormControl>
                   <Input 
-                    placeholder="John Doe" 
+                    placeholder="Иван Иванов" 
                     className="bg-card border border-border focus:border-primary" 
                     {...field} 
                   />
@@ -76,10 +76,10 @@ const ContactForm: React.FC = () => {
             name="email"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Email Address</FormLabel>
+                <FormLabel>Адрес электронной почты</FormLabel>
                 <FormControl>
                   <Input 
-                    placeholder="john@example.com" 
+                    placeholder="ivan@example.com" 
                     className="bg-card border border-border focus:border-primary" 
                     {...field} 
                   />
@@ -94,18 +94,18 @@ const ContactForm: React.FC = () => {
             name="subject"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Subject</FormLabel>
+                <FormLabel>Тема</FormLabel>
                 <Select onValueChange={field.onChange} defaultValue={field.value}>
                   <FormControl>
                     <SelectTrigger className="bg-card border border-border focus:border-primary">
-                      <SelectValue placeholder="Select a subject" />
+                      <SelectValue placeholder="Выберите тему" />
                     </SelectTrigger>
                   </FormControl>
                   <SelectContent>
-                    <SelectItem value="general">General Inquiry</SelectItem>
-                    <SelectItem value="technical">Technical Support</SelectItem>
-                    <SelectItem value="billing">Billing Question</SelectItem>
-                    <SelectItem value="other">Other</SelectItem>
+                    <SelectItem value="general">Общий вопрос</SelectItem>
+                    <SelectItem value="technical">Техническая поддержка</SelectItem>
+                    <SelectItem value="billing">Вопрос по оплате</SelectItem>
+                    <SelectItem value="other">Другое</SelectItem>
                   </SelectContent>
                 </Select>
                 <FormMessage />
@@ -118,11 +118,11 @@ const ContactForm: React.FC = () => {
             name="message"
             render={({ field }) => (
               <FormItem>
-                <FormLabel>Your Message</FormLabel>
+                <FormLabel>Ваше сообщение</FormLabel>
                 <FormControl>
                   <Textarea 
-                    placeholder="How can we help you?" 
-                    className="bg-card border border-border focus:border-primary" 
+                    placeholder="Как мы можем вам помочь?" 
+                    className="bg-card border border-border focus:border-primary focus-visible:ring-2 focus-visible:ring-black focus-visible:ring-offset-2" 
                     rows={4} 
                     {...field} 
                   />
@@ -131,12 +131,13 @@ const ContactForm: React.FC = () => {
               </FormItem>
             )}
           />
+
           
           <Button 
             type="submit" 
             className="w-full bg-primary hover:bg-primary/80 text-primary-foreground font-medium rounded-lg px-5 py-3 transition duration-300"
           >
-            Send Message
+            Отправить сообщение
           </Button>
         </form>
       </Form>

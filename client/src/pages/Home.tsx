@@ -1,4 +1,4 @@
-import React from 'react';
+import React, {useRef} from 'react';
 import Hero from '@/components/Hero';
 import { useLocation, useRoute } from 'wouter';
 import { Shield, Zap, Lock, Globe, LifeBuoy, BarChart4 } from 'lucide-react';
@@ -8,105 +8,107 @@ import ContactForm from '@/components/ContactForm';
 import { motion } from 'framer-motion';
 
 const Home: React.FC = () => {
-  // Features section data
+  
+  const featuresSectionRef = useRef<HTMLDivElement>(null); // Реф для секции Features
+  // Данные для секции Features
   const features = [
     {
       icon: Shield,
-      title: 'Complete Anonymity',
-      description: 'Your real IP address remains hidden, allowing you to browse the web without leaving traces of your identity.',
+      title: 'Полная анонимность',
+      description: 'Ваш реальный IP-адрес остается скрытым, позволяя вам просматривать веб без следов вашей личности.',
     },
     {
       icon: Zap,
-      title: 'Lightning Speed',
-      description: 'Our proxies are optimized for performance, ensuring minimal impact on your browsing and download speeds.',
+      title: 'Молниеносная скорость',
+      description: 'Наши прокси оптимизированы для производительности, обеспечивая минимальное воздействие на скорость вашего браузинга и загрузки.',
     },
     {
       icon: Lock,
-      title: 'Enterprise-Grade Security',
-      description: 'Our proxies use advanced encryption protocols to protect your data from hackers and surveillance.',
+      title: 'Безопасность уровня Enterprise',
+      description: 'Наши прокси используют продвинутые протоколы шифрования для защиты ваших данных от хакеров и слежки.',
     },
     {
       icon: Globe,
-      title: 'Global Access',
-      description: 'Connect through servers located in over 50 countries to access geo-restricted content from anywhere.',
+      title: 'Глобальный доступ',
+      description: 'Подключайтесь через серверы, расположенные более чем в 50 странах, чтобы получить доступ к гео-ограниченному контенту из любой точки мира.',
     },
     {
       icon: LifeBuoy,
-      title: '24/7 Support',
-      description: 'Our dedicated team is available around the clock to help you with any technical issues or questions.',
+      title: 'Круглосуточная поддержка',
+      description: 'Наша преданная команда доступна круглосуточно, чтобы помочь вам с любыми техническими вопросами или проблемами.',
     },
     {
       icon: BarChart4,
-      title: 'Scalable Solutions',
-      description: 'From individual users to large enterprises, our proxy solutions can scale to meet your specific needs.',
+      title: 'Масштабируемые решения',
+      description: 'От индивидуальных пользователей до крупных предприятий, наши прокси-решения могут масштабироваться для удовлетворения ваших конкретных потребностей.',
     }
   ];
 
-  // Pricing section data
+  // Данные для секции Pricing
   const pricingPlans = [
     {
-      title: 'Basic',
+      title: 'Базовый',
       price: '$9',
       features: [
-        { name: '5 Private Proxies' },
-        { name: '10 Countries' },
-        { name: '1GB Bandwidth/day' },
-        { name: 'Email Support' }
+        { name: '5 приватных прокси' },
+        { name: '10 стран' },
+        { name: '1 ГБ трафика в день' },
+        { name: 'Поддержка по email' }
       ],
       popular: false
     },
     {
-      title: 'Professional',
+      title: 'Профессиональный',
       price: '$19',
       features: [
-        { name: '20 Private Proxies' },
-        { name: '30 Countries' },
-        { name: '5GB Bandwidth/day' },
-        { name: 'Priority Support' },
-        { name: 'Proxy Rotation' }
+        { name: '20 приватных прокси' },
+        { name: '30 стран' },
+        { name: '5 ГБ трафика в день' },
+        { name: 'Приоритетная поддержка' },
+        { name: 'Ротация прокси' }
       ],
       popular: true
     },
     {
-      title: 'Enterprise',
+      title: 'Корпоративный',
       price: '$49',
       features: [
-        { name: '100 Private Proxies' },
-        { name: '50+ Countries' },
-        { name: 'Unlimited Bandwidth' },
-        { name: '24/7 Dedicated Support' },
-        { name: 'Advanced Security Features' }
+        { name: '100 приватных прокси' },
+        { name: '50+ стран' },
+        { name: 'Неограниченный трафик' },
+        { name: 'Круглосуточная поддержка' },
+        { name: 'Продвинутые функции безопасности' }
       ],
       popular: false
     }
   ];
 
-  // Contact info
+  // Контактная информация
   const contactInfo = [
     {
       icon: 'mail',
-      title: 'Email Us',
+      title: 'Напишите нам',
       description: 'support@shadowlink.com'
     },
     {
       icon: 'phone',
-      title: 'Call Us',
+      title: 'Позвоните нам',
       description: '+1 (555) 123-4567'
     },
     {
       icon: 'message-circle',
-      title: 'Live Chat',
-      description: 'Available 24/7 for instant support'
+      title: 'Чат онлайн',
+      description: 'Доступен круглосуточно для мгновенной поддержки'
     }
   ];
 
   return (
     <div>
-      {/* Hero Section */}
-      <Hero />
+      {/* Герой секция */}
+      <Hero scrollToFeatures={featuresSectionRef} /> {/* Передаем реф в Hero */}
       
-      {/* Features Section */}
-      <section id="features" className="py-20 bg-card/50">
+      {/* Секция Features */}
+      <section ref={featuresSectionRef} id="features" className="py-20 bg-card/50">
         <div className="container mx-auto px-6">
           <motion.div 
             className="text-center mb-16"
@@ -115,8 +117,8 @@ const Home: React.FC = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Why Choose <span className="text-primary">Shadowlink</span>?</h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">Our proxy services offer unmatched protection and privacy for all your online activities.</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Почему стоит выбрать <span className="text-primary">Shadowlink</span>?</h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">Наши прокси-сервисы предлагают непревзойденную защиту и конфиденциальность для всех ваших онлайн-активностей.</p>
           </motion.div>
           
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8">
@@ -133,7 +135,7 @@ const Home: React.FC = () => {
         </div>
       </section>
       
-      {/* Pricing Section */}
+      {/* Секция Pricing */}
       <section id="pricing" className="py-20">
         <div className="container mx-auto px-6">
           <motion.div 
@@ -143,8 +145,8 @@ const Home: React.FC = () => {
             viewport={{ once: true }}
             transition={{ duration: 0.5 }}
           >
-            <h2 className="text-3xl md:text-4xl font-bold mb-4">Simple, Transparent <span className="text-primary">Pricing</span></h2>
-            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">Choose the plan that's right for you, no hidden fees or complicated terms.</p>
+            <h2 className="text-3xl md:text-4xl font-bold mb-4">Простые и прозрачные <span className="text-primary">цены</span></h2>
+            <p className="text-lg text-muted-foreground max-w-2xl mx-auto">Выберите план, который подходит вам, без скрытых платежей и сложных условий.</p>
           </motion.div>
           
           <div className="grid grid-cols-1 md:grid-cols-3 gap-8">
@@ -162,7 +164,7 @@ const Home: React.FC = () => {
         </div>
       </section>
       
-      {/* Contact Section */}
+      {/* Секция Contact */}
       <section id="contact" className="py-20 bg-card/50">
         <div className="container mx-auto px-6">
           <div className="flex flex-col md:flex-row md:space-x-8">
@@ -173,8 +175,8 @@ const Home: React.FC = () => {
                 viewport={{ once: true }}
                 transition={{ duration: 0.5 }}
               >
-                <h2 className="text-3xl md:text-4xl font-bold mb-6">Get in <span className="text-primary">Touch</span></h2>
-                <p className="text-muted-foreground mb-6">Have questions about our services? Our team is ready to assist you with anything you need.</p>
+                <h2 className="text-3xl md:text-4xl font-bold mb-6">Свяжитесь с <span className="text-primary">нами</span></h2>
+                <p className="text-muted-foreground mb-6">Есть вопросы о наших услугах? Наша команда готова помочь вам с любыми вопросами.</p>
               </motion.div>
               
               <div className="space-y-4 mb-8">

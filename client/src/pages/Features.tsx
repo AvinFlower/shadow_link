@@ -5,67 +5,67 @@ import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
 
 const Features: React.FC = () => {
-  // Extended features list
+  // Расширенный список функций
   const features = [
     {
       icon: Shield,
-      title: 'Complete Anonymity',
-      description: 'Your real IP address remains hidden, allowing you to browse the web without leaving traces of your identity.',
+      title: 'Полная Анонимность',
+      description: 'Ваш реальный IP-адрес остается скрытым, позволяя вам просматривать веб-страницы, не оставляя следов своей личности.',
     },
     {
       icon: Zap,
-      title: 'Lightning Speed',
-      description: 'Our proxies are optimized for performance, ensuring minimal impact on your browsing and download speeds.',
+      title: 'Молниеносная Скорость',
+      description: 'Наши прокси оптимизированы для производительности, обеспечивая минимальное влияние на скорость загрузки и серфинга.',
     },
     {
       icon: Lock,
-      title: 'Enterprise-Grade Security',
-      description: 'Our proxies use advanced encryption protocols to protect your data from hackers and surveillance.',
+      title: 'Корпоративная Безопасность',
+      description: 'Наши прокси используют передовые протоколы шифрования для защиты ваших данных от хакеров и слежки.',
     },
     {
       icon: Globe,
-      title: 'Global Access',
-      description: 'Connect through servers located in over 50 countries to access geo-restricted content from anywhere.',
+      title: 'Глобальный Доступ',
+      description: 'Подключайтесь через серверы, расположенные более чем в 50 странах, для доступа к контенту, ограниченному по географическому положению.',
     },
     {
       icon: LifeBuoy,
-      title: '24/7 Support',
-      description: 'Our dedicated team is available around the clock to help you with any technical issues or questions.',
+      title: 'Поддержка 24/7',
+      description: 'Наша команда поддержки доступна круглосуточно, чтобы помочь вам с любыми техническими вопросами.',
     },
     {
       icon: BarChart4,
-      title: 'Scalable Solutions',
-      description: 'From individual users to large enterprises, our proxy solutions can scale to meet your specific needs.',
+      title: 'Масштабируемые Решения',
+      description: 'От индивидуальных пользователей до крупных предприятий — наши прокси-решения могут масштабироваться в зависимости от ваших потребностей.',
     },
     {
       icon: Server,
-      title: 'Dedicated Servers',
-      description: 'Get exclusive use of proxy servers for maximum performance and security for your business.',
+      title: 'Выделенные Серверы',
+      description: 'Получите эксклюзивное использование прокси-серверов для максимальной производительности и безопасности вашего бизнеса.',
     },
     {
       icon: Clock,
-      title: 'Unlimited Duration',
-      description: 'No time limits on proxy usage - keep your connections active as long as you need them.',
+      title: 'Неограниченная Длительность',
+      description: 'Нет временных ограничений на использование прокси — держите свои соединения активными столько, сколько нужно.',
     },
     {
       icon: RefreshCw,
-      title: 'Automatic Rotation',
-      description: 'Our system can automatically rotate your proxy IPs at specified intervals for enhanced anonymity.',
+      title: 'Автоматическая Ротация',
+      description: 'Наша система может автоматически менять ваши IP-адреса через определенные интервалы для улучшенной анонимности.',
     },
     {
       icon: Database,
-      title: 'Extensive Locations',
-      description: 'Choose from a vast network of proxy servers located in cities around the world.',
+      title: 'Обширная География',
+      description: 'Выбирайте из обширной сети прокси-серверов, расположенных в городах по всему миру.',
     },
     {
       icon: Layers,
-      title: 'Multiple Protocols',
-      description: 'Support for HTTP, HTTPS, SOCKS4, and SOCKS5 protocols to meet all your proxy needs.',
+      title: 'Множество Протоколов',
+      description: 'Поддержка протоколов HTTP, HTTPS, SOCKS4 и SOCKS5 для удовлетворения всех ваших потребностей в прокси.',
     },
     {
       icon: Users,
-      title: 'Concurrent Connections',
-      description: 'Connect multiple devices simultaneously with our multi-user proxy plans.',
+      title: 'Совместимые Подключения',
+      description: 'Подключайте несколько устройств одновременно с нашими планами прокси для нескольких пользователей.',
     }
   ];
 
@@ -78,9 +78,9 @@ const Features: React.FC = () => {
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5 }}
         >
-          <h1 className="text-4xl md:text-5xl font-bold mb-4">Our <span className="text-primary">Features</span></h1>
+          <h1 className="text-4xl md:text-5xl font-bold mb-4">Наши <span className="text-primary">Особенности</span></h1>
           <p className="text-lg text-muted-foreground max-w-2xl mx-auto">
-            Explore the comprehensive set of features that make Shadowlink the leading choice for secure proxy services.
+            Изучите всеобъемлющий набор функций, который делает Shadowlink ведущим выбором для безопасных прокси-сервисов.
           </p>
         </motion.div>
         
@@ -105,22 +105,22 @@ const Features: React.FC = () => {
         >
           <div className="flex flex-col md:flex-row items-center">
             <div className="md:w-2/3 mb-6 md:mb-0 md:pr-8">
-              <h2 className="text-2xl md:text-3xl font-bold mb-4">Advanced Security Technology</h2>
+              <h2 className="text-2xl md:text-3xl font-bold mb-4">Передовые Технологии Безопасности</h2>
               <p className="text-muted-foreground mb-4">
-                Our proxy servers utilize military-grade encryption and cutting-edge security measures to ensure your data remains private and protected from threats.
+                Наши прокси-серверы используют шифрование уровня военной безопасности и современные меры защиты, чтобы ваши данные оставались конфиденциальными и защищенными от угроз.
               </p>
               <ul className="space-y-2 mb-6">
                 <li className="flex items-center">
                   <Key className="h-5 w-5 text-primary mr-2" />
-                  <span>256-bit AES encryption</span>
+                  <span>Шифрование AES 256-бит</span>
                 </li>
                 <li className="flex items-center">
                   <Key className="h-5 w-5 text-primary mr-2" />
-                  <span>SSL/TLS secure connections</span>
+                  <span>SSL/TLS безопасные соединения</span>
                 </li>
                 <li className="flex items-center">
                   <Key className="h-5 w-5 text-primary mr-2" />
-                  <span>No-logs policy</span>
+                  <span>Политика отсутствия логов</span>
                 </li>
               </ul>
             </div>
@@ -142,15 +142,15 @@ const Features: React.FC = () => {
           viewport={{ once: true }}
           transition={{ duration: 0.5 }}
         >
-          <h2 className="text-2xl md:text-3xl font-bold mb-4">Ready to experience the difference?</h2>
+          <h2 className="text-2xl md:text-3xl font-bold mb-4">Готовы ощутить разницу?</h2>
           <p className="text-lg text-muted-foreground mb-8 max-w-2xl mx-auto">
-            Join thousands of satisfied customers who trust Shadowlink for their online privacy and security needs.
+            Присоединяйтесь к тысячам довольных клиентов, которые доверяют Shadowlink для защиты своей онлайн-конфиденциальности и безопасности.
           </p>
           <Button 
             size="lg"
             className="bg-primary hover:bg-primary/80 text-primary-foreground font-semibold rounded-full px-8 py-6 transition duration-300 transform hover:scale-105"
           >
-            Get Started Today
+            Начать Сегодня
           </Button>
         </motion.div>
       </div>
