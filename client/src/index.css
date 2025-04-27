@@ -51,4 +51,28 @@
   .bg-background {
     @apply bg-black;
   }
+
+  html {
+    overflow-y: scroll;
+  }
+
+  /* Custom scrollbar styles */
+  ::-webkit-scrollbar {
+    width: 10px; /* Ширина скроллбара */
+  }
+
+  ::-webkit-scrollbar-thumb {
+    background-color: rgb(0, 230, 84, 0.2); /* Цвет бегунка */
+    border-radius: 10px; /* Скругление бегунка */
+    border: 3px solid rgba(0, 0, 0, 0.1); /* Тень вокруг бегунка */
+  }
+
+  ::-webkit-scrollbar-thumb:hover {
+    background-color: rgba(0, 230, 84, 0.3); /* Цвет бегунка при наведении */
+  }
+
+  ::-webkit-scrollbar-track {
+    background: rgba(10, 59, 28, 0.5); /* Цвет фона полосы прокрутки */
+    border-radius: 10px;
+  }
 }

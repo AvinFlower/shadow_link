@@ -1,9 +1,9 @@
-import { useState } from "react";
+import React, { useState, useMemo, useEffect } from "react";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/hooks/use-auth";
-import { useQuery } from "@tanstack/react-query";
+import { useMutation, useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import {
@@ -29,205 +29,130 @@ import {
   TabsList,
   TabsTrigger,
 } from "@/components/ui/tabs";
-import { Loader2, User, Shield, CreditCard, Clock, Globe, Server } from "lucide-react";
+import {
+  Loader2,
+  User,
+  Shield,
+  CreditCard,
+  Globe,
+  Server,
+} from "lucide-react";
 import { motion } from "framer-motion";
 
+// Schemas
 const profileSchema = z.object({
-  full_name: z.string().min(2, {
-    message: "Имя должно содержать минимум 2 символа",
-  }),
-  email: z.string().email({
-    message: "Пожалуйста, введите корректный email",
-  }),
+  username: z.string().min(2),
+  email: z.string().email(),
+  currentPassword: z.string().optional(),
+  newPassword: z.string().optional(),
+}).refine(data => !(data.newPassword && !data.currentPassword), {
+  message: "Для смены пароля введите текущий пароль",
+  path: ["currentPassword"],
 });
 
 type ProfileValues = z.infer<typeof profileSchema>;
 
-const balanceSchema = z.object({
-  amount: z.string()
-    .min(1, { message: "Пожалуйста, введите сумму" })
-    .refine((val) => !isNaN(parseInt(val)), {
-      message: "Сумма должна быть числом"
-    })
-    .transform((val) => parseInt(val, 10)),
+const proxyPurchaseSchema = z.object({
+  country: z.enum(["us", "uk", "de", "ru"]),
+  duration: z.coerce.number().min(1),
+  price: z.string(),
 });
 
-type BalanceValues = z.infer<typeof balanceSchema>;
+type ProxyPurchaseValues = z.infer<typeof proxyPurchaseSchema>;
+
+type PurchaseVars = { country: string; duration: number; amount: number };
+
+type TabKey = "profile" | "credits" | "proxies";
 
 export default function ProfilePage() {
-  const { user, updateProfileMutation, addCreditsMutation } = useAuth();
-  const [activeTab, setActiveTab] = useState("profile");
+  const { user, updateProfileMutation } = useAuth();
+  const [activeTab, setActiveTab] = useState<TabKey>("profile");
 
-  // Получение данных о прокси
+  // Новая мутация для покупки прокси с явными типами
+  const purchaseProxyMutation = useMutation<
+    any,
+    Error,
+    PurchaseVars
+  >({
+    mutationFn: (data: PurchaseVars) =>
+      fetch("/api/purchase-proxy", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(data),
+      }).then(res => res.json()),
+  });
+
+  // Запросы на получение прокси и истории
   const { data: proxies, isLoading: proxiesLoading } = useQuery({
     queryKey: ["/api/my-proxies"],
     queryFn: getQueryFn({ on401: "throw" }),
   });
-
-  // Получение данных о прокси и их истории
   const { data: proxyHistory, isLoading: historyLoading } = useQuery({
     queryKey: ["/api/proxy-history"],
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
+  // Формы
   const profileForm = useForm<ProfileValues>({
     resolver: zodResolver(profileSchema),
-    defaultValues: {
-      full_name: user?.full_name || "",
-      email: user?.email || "",
-    },
+    defaultValues: { username: user?.username || "", email: user?.email || "" },
   });
-  
-//amount: "100",
-  const balanceForm = useForm<BalanceValues>({
-    resolver: zodResolver(balanceSchema),
-    defaultValues: {
-      amount: 100,
-    },
+  const purchaseForm = useForm<ProxyPurchaseValues>({
+    resolver: zodResolver(proxyPurchaseSchema),
+    defaultValues: { country: "us", duration: 1, price: "0.00" },
   });
 
+  // Расчёт цены
+  const computedPrice = useMemo(() => {
+    const { country, duration } = purchaseForm.getValues();
+    // базовая стоимость за 1 месяц (в долларах)
+    const base = 5;
+
+    // поправка на страну
+    const multipliers: Record<string, number> = {
+      us: 1,
+      uk: 1.2,
+      de: 1.1,
+      ru: 0.8,
+    };
+    return (base * (multipliers[country] || 1) * duration).toFixed(2);
+  }, [purchaseForm.watch("country"), purchaseForm.watch("duration")]);
+
+  useEffect(() => {
+    purchaseForm.setValue("price", computedPrice);
+  }, [computedPrice]);
+
+  // Хендлеры
   function onProfileSubmit(data: ProfileValues) {
-    updateProfileMutation.mutate(data);
+    if (!user?.id) return;
+    const { currentPassword, newPassword, ...profileData } = data;
+    updateProfileMutation.mutate({
+      id: user.id,
+      ...profileData,
+      ...(newPassword && currentPassword
+        ? { currentPassword, newPassword }
+        : {}),
+    });
   }
 
-  function onBalanceSubmit(data: BalanceValues) {
-    addCreditsMutation.mutate({ amount: data.amount });
+  function onPurchaseSubmit(data: ProxyPurchaseValues) {
+    purchaseProxyMutation.mutate({
+      country: data.country,
+      duration: data.duration,
+      amount: parseFloat(data.price),
+    });
   }
 
   return (
     <div className="container mx-auto pt-32 pb-20">
       <div className="flex flex-col gap-8">
-        {/* Профиль пользователя с информацией */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
-          {/* Карточка пользователя */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.1 }}
-          >
-            <Card className="bg-black/40 backdrop-blur-md border border-green-500/20">
-              <CardHeader className="flex flex-row items-center gap-4">
-                <div className="h-14 w-14 rounded-full bg-green-500/20 flex items-center justify-center">
-                  <User className="h-8 w-8 text-green-500" />
-                </div>
-                <div>
-                  <CardTitle>{user?.username}</CardTitle>
-                  <CardDescription>{user?.full_name}</CardDescription>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Роль:</span>
-                    <span className="font-medium flex items-center gap-1">
-                      <Shield className="h-4 w-4 text-green-500" />
-                      {user?.role === "admin" ? "Администратор" : "Пользователь"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Email:</span>
-                    <span className="font-medium">{user?.email || "Не указан"}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Дата регистрации:</span>
-                    <span className="font-medium">
-                      {user?.createdAt
-                        ? new Date(user.createdAt).toLocaleDateString()
-                        : "Неизвестно"}
-                    </span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Последний вход:</span>
-                    <span className="font-medium">
-                      {user?.lastLogin
-                        ? new Date(user.lastLogin).toLocaleDateString()
-                        : "Неизвестно"}
-                    </span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-
-          {/* Карточка баланса */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.2 }}
-          >
-            <Card className="bg-black/40 backdrop-blur-md border border-green-500/20">
-              <CardHeader className="flex flex-row items-center gap-4">
-                <div className="h-14 w-14 rounded-full bg-green-500/20 flex items-center justify-center">
-                  <CreditCard className="h-8 w-8 text-green-500" />
-                </div>
-                <div>
-                  <CardTitle>Баланс счета</CardTitle>
-                  <CardDescription>Ваши средства для оплаты</CardDescription>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="text-center py-6">
-                  <h3 className="text-4xl font-bold text-green-500">
-                    {user?.proxyCredits || 0} ₽
-                  </h3>
-                  <p className="text-gray-400 mt-2">доступных средств</p>
-                </div>
-              </CardContent>
-              <CardFooter>
-                <Button variant="outline" className="w-full" onClick={() => setActiveTab("credits")}>
-                  Пополнить баланс
-                </Button>
-              </CardFooter>
-            </Card>
-          </motion.div>
-
-          {/* Карточка статистики */}
-          <motion.div
-            initial={{ opacity: 0, y: 20 }}
-            animate={{ opacity: 1, y: 0 }}
-            transition={{ duration: 0.5, delay: 0.3 }}
-          >
-            <Card className="bg-black/40 backdrop-blur-md border border-green-500/20">
-              <CardHeader className="flex flex-row items-center gap-4">
-                <div className="h-14 w-14 rounded-full bg-green-500/20 flex items-center justify-center">
-                  <Globe className="h-8 w-8 text-green-500" />
-                </div>
-                <div>
-                  <CardTitle>Статистика</CardTitle>
-                  <CardDescription>Использование прокси</CardDescription>
-                </div>
-              </CardHeader>
-              <CardContent>
-                <div className="space-y-4">
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Активные прокси:</span>
-                    <span className="font-medium">{Array.isArray(proxies) ? proxies.length : 0}</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Передано данных:</span>
-                    <span className="font-medium">428 MB</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Время работы:</span>
-                    <span className="font-medium">14 дней</span>
-                  </div>
-                  <div className="flex justify-between">
-                    <span className="text-gray-400">Статус:</span>
-                    <span className="font-medium text-green-500">Активен</span>
-                  </div>
-                </div>
-              </CardContent>
-            </Card>
-          </motion.div>
-        </div>
-
         {/* Основные настройки и управление */}
         <motion.div
           initial={{ opacity: 0, y: 20 }}
           animate={{ opacity: 1, y: 0 }}
           transition={{ duration: 0.5, delay: 0.4 }}
         >
-          <Card className="bg-black/40 backdrop-blur-md border border-green-500/20">
+          <Card className="bg-black/40 backdrop-blur-md border border-green-500/30">
             <CardHeader>
               <CardTitle>Управление аккаунтом</CardTitle>
               <CardDescription>
@@ -236,122 +161,147 @@ export default function ProfilePage() {
             </CardHeader>
             <CardContent>
               <Tabs
-                defaultValue={activeTab}
-                onValueChange={setActiveTab}
-                className="w-full"
+              value={activeTab}                                    // вместо defaultValue
+              onValueChange={(val: string) =>                       // val приходит как string
+                setActiveTab(val as TabKey)                         // явно кастим в TabKey
+              }
+              className="w-full"
               >
-                <TabsList className="grid grid-cols-3 mb-8">
-                  <TabsTrigger value="profile">Профиль</TabsTrigger>
-                  <TabsTrigger value="credits">Пополнение</TabsTrigger>
-                  <TabsTrigger value="proxies">Мои прокси</TabsTrigger>
-                </TabsList>
+              <TabsList className="grid grid-cols-3 mb-8">
+                <TabsTrigger value="profile">Профиль</TabsTrigger>
+                <TabsTrigger value="credits">Покупка конфигураций</TabsTrigger>
+                <TabsTrigger value="proxies">Мои прокси</TabsTrigger>
+              </TabsList>
+  
 
                 {/* Вкладка профиля */}
-                <TabsContent value="profile">
+                <TabsContent value="profile" className="w-full max-w-none">
                   <Form {...profileForm}>
                     <form
                       onSubmit={profileForm.handleSubmit(onProfileSubmit)}
                       className="space-y-6"
                     >
                       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                        <FormField
-                          control={profileForm.control}
-                          name="full_name"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Полное имя</FormLabel>
-                              <FormControl>
-                                <Input placeholder="Иван Иванов" {...field} />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        <FormField
-                          control={profileForm.control}
-                          name="email"
-                          render={({ field }) => (
-                            <FormItem>
-                              <FormLabel>Email</FormLabel>
-                              <FormControl>
-                                <Input
-                                  type="email"
-                                  placeholder="email@example.com"
-                                  {...field}
-                                />
-                              </FormControl>
-                              <FormMessage />
-                            </FormItem>
-                          )}
-                        />
-                        {user?.birth_date && (
-                          <div className="md:col-span-2">
-                            <div className="rounded-md border p-4 my-3">
-                              <div className="font-medium">Дата рождения</div>
-                              <div className="text-gray-400 mt-1">{user.birth_date}</div>
-                              <p className="text-xs text-gray-400 mt-2">Дата рождения не может быть изменена после регистрации</p>
+                        <div className="md:col-span-2">
+                          <div className="flex flex-row items-center gap-4 mb-6">
+                            <div className="h-14 w-14 rounded-full bg-green-500/20 flex items-center justify-center">
+                              <User className="h-8 w-8 text-green-500" />
+                            </div>
+                            <div>
+                              <div className="text-xl font-bold">{user?.username}</div>
+                              <span className="font-medium flex items-center gap-1 text-green-500">
+                                {user?.role === "admin" ? "Администратор" : "Пользователь"}
+                                <Shield className="h-4 w-4" />
+                              </span>
                             </div>
                           </div>
-                        )}
+
+                          {/* Поля ввода имени пользователя и email */}
+                          <div className="bg-black/30 p-4 rounded-lg mb-6">
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <FormField
+                                control={profileForm.control}
+                                name="username"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Имя пользователя</FormLabel>
+                                    <FormControl>
+                                      <Input placeholder="cool_username" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={profileForm.control}
+                                name="email"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Email</FormLabel>
+                                    <FormControl>
+                                      <Input type="email" placeholder="email@example.com" {...field} />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
+                          </div>
+                              
+                          {/* Смена пароля */}
+                          <div className="bg-black/30 p-4 rounded-lg mb-6">
+                            <div className="text-xl font-medium mb-4">Смена пароля</div>
+                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                                <FormField
+                                  control={profileForm.control}
+                                  name="currentPassword"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Текущий пароль</FormLabel>
+                                      <FormControl>
+                                        <Input type="password" placeholder="Введите текущий пароль" {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                                <FormField
+                                  control={profileForm.control}
+                                  name="newPassword"
+                                  render={({ field }) => (
+                                    <FormItem>
+                                      <FormLabel>Новый пароль</FormLabel>
+                                      <FormControl>
+                                        <Input type="password" placeholder="Введите новый пароль" {...field} />
+                                      </FormControl>
+                                      <FormMessage />
+                                    </FormItem>
+                                  )}
+                                />
+                              </div>
+                          </div>
+                              
+                          {/* Дата рождения */}
+                          {user?.birth_date && (
+                            <div className="rounded-md p-4 my-3">
+                              <div className="font-medium">Дата рождения</div>
+                              <div className="text-gray-400 mt-1">{user.birth_date}</div>
+                              <p className="text-xs text-gray-400 mt-2">
+                                Дата рождения не может быть изменена после регистрации
+                              </p>
+                            </div>
+                          )}
+                        </div>
                       </div>
-                      <Button
-                        type="submit"
-                        disabled={updateProfileMutation.isPending}
-                      >
-                        {updateProfileMutation.isPending ? (
-                          <>
-                            <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                            Сохранение...
-                          </>
-                        ) : (
-                          "Сохранить изменения"
-                        )}
-                      </Button>
+                        
+                      <div className="flex justify-end">
+                        <Button
+                          type="submit"
+                          disabled={updateProfileMutation.isPending}
+                        >
+                          {updateProfileMutation.isPending ? (
+                            <>
+                              <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                              Сохранение...
+                            </>
+                          ) : (
+                            "Сохранить изменения"
+                          )}
+                        </Button>
+                      </div>
                     </form>
                   </Form>
                 </TabsContent>
 
-                {/* Вкладка пополнения баланса */}
-                <TabsContent value="credits">
-                  <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
-                    <div>
-                      <h3 className="text-xl font-semibold mb-4">Пополнение баланса</h3>
-                      <Form {...balanceForm}>
-                        <form onSubmit={balanceForm.handleSubmit(onBalanceSubmit)} className="space-y-6">
-                          <FormField
-                            control={balanceForm.control}
-                            name="amount"
-                            render={({ field }) => (
-                              <FormItem>
-                                <FormLabel>Сумма пополнения (₽)</FormLabel>
-                                <FormControl>
-                                  <Input type="text" placeholder="Введите сумму" {...field} />
-                                </FormControl>
-                                <FormMessage />
-                              </FormItem>
-                            )}
-                          />
-                          <Button
-                            type="submit"
-                            disabled={addCreditsMutation.isPending}
-                          >
-                            {addCreditsMutation.isPending ? (
-                              <>
-                                <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                Обработка...
-                              </>
-                            ) : (
-                              "Пополнить баланс"
-                            )}
-                          </Button>
-                        </form>
-                      </Form>
-                    </div>
 
+                {/* Вкладка покупки конфигурации */}
+                <TabsContent value="credits" className="w-full max-w-none">
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    {/* Способы оплаты - ЛЕВАЯ колонка */}
                     <div>
                       <h3 className="text-xl font-semibold mb-4">Способы оплаты</h3>
                       <div className="space-y-4">
-                        <div className="p-4 border border-green-500/20 rounded-lg flex justify-between items-center">
+                        <div className="p-4 border border-green-500/30 rounded-lg flex justify-between items-center">
                           <div className="flex gap-3 items-center">
                             <div className="h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center">
                               <CreditCard className="h-5 w-5 text-blue-500" />
@@ -367,8 +317,8 @@ export default function ProfilePage() {
                             Выбрать
                           </Button>
                         </div>
-
-                        <div className="p-4 border border-green-500/20 rounded-lg flex justify-between items-center">
+                                        
+                        <div className="p-4 border border-green-500/30 rounded-lg flex justify-between items-center">
                           <div className="flex gap-3 items-center">
                             <div className="h-10 w-10 rounded-full bg-purple-500/20 flex items-center justify-center">
                               <Globe className="h-5 w-5 text-purple-500" />
@@ -384,8 +334,8 @@ export default function ProfilePage() {
                             Выбрать
                           </Button>
                         </div>
-
-                        <div className="p-4 border border-green-500/20 rounded-lg flex justify-between items-center">
+                                        
+                        <div className="p-4 border border-green-500/30 rounded-lg flex justify-between items-center">
                           <div className="flex gap-3 items-center">
                             <div className="h-10 w-10 rounded-full bg-orange-500/20 flex items-center justify-center">
                               <Server className="h-5 w-5 text-orange-500" />
@@ -403,15 +353,78 @@ export default function ProfilePage() {
                         </div>
                       </div>
                     </div>
+                                        
+                    {/* Покупка прокси - ПРАВАЯ колонка */}
+                    <div>
+                      <h3 className="text-xl font-semibold mb-4">Покупка прокси</h3>
+                      <Form {...purchaseForm}>
+                        <form onSubmit={purchaseForm.handleSubmit(onPurchaseSubmit)} className="space-y-6">
+                          {/* Контейнер для страны прокси и срока */}
+                          <div className="p-4 border border-green-500/30 rounded-lg space-y-4">
+                            <FormField control={purchaseForm.control} name="country" render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Страна прокси</FormLabel>
+                                <FormControl>
+                                  <select {...field} className="h-10 w-full rounded-md border border-input bg-black px-3 py-2 text-sm text-white shadow-sm placeholder:text-muted-foreground focus:outline-none                 focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                                    <option value="us">США</option>
+                                    <option value="uk">Великобритания</option>
+                                    <option value="de">Германия</option>
+                                    <option value="ru">Россия</option>
+                                  </select>
+                                </FormControl>
+                              </FormItem>
+                            )} />
+                            <FormField control={purchaseForm.control} name="duration" render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Срок (месяцев)</FormLabel>
+                                <FormControl>
+                                  <select {...field} className="h-10 w-full rounded-md border border-input bg-black px-3 py-2 text-sm text-white shadow-sm placeholder:text-muted-foreground focus:outline-none                 focus:ring-2 focus:ring-ring focus:ring-offset-2">
+                                    <option value={1}>1</option>
+                                    <option value={3}>3</option>
+                                    <option value={6}>6</option>
+                                    <option value={12}>12</option>
+                                  </select>
+                                </FormControl>
+                              </FormItem>
+                            )} />
+                          </div>
+                          
+                          <FormField control={purchaseForm.control} name="price" render={({ field }) => (
+                            <div className="flex items-center justify-between gap-4">
+                              {/* Блок Итого */}
+                              <div className="flex items-center justify-between h-10 w-full rounded-md border border-input bg-black px-4 text-sm text-white shadow-sm">
+                                <span className="text-muted-foreground">Итого: </span>
+                                <span className="font-semibold">{purchaseForm.watch('price')} $</span>
+                              </div>
+                              
+                              {/* Кнопка Купить */}
+                              <Button type="submit" disabled={purchaseProxyMutation.status === "pending"} className="h-10">
+                                {purchaseProxyMutation.status === "pending" ? (
+                                  <>
+                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                    Обработка...
+                                  </>
+                                ) : (
+                                  "Купить прокси"
+                                )}
+                              </Button>
+                            </div>
+                          )} />
+                        </form>
+                      </Form>
+                    </div>
                   </div>
                 </TabsContent>
 
+
                 {/* Вкладка прокси и истории */}
-                <TabsContent value="proxies">
+                <TabsContent value="proxies" className="w-full max-w-none">
                   <div className="space-y-8">
-                    <div className="flex justify-between items-center">
+                    <div className="flex items-center gap-4 mb-4">
+                      <div className="h-14 w-14 rounded-full bg-green-500/20 flex items-center justify-center">
+                        <Globe className="h-8 w-8 text-green-500" />
+                      </div>
                       <h3 className="text-xl font-semibold">История прокси</h3>
-                      <Button>Добавить новый прокси</Button>
                     </div>
 
                     {/* Фильтры и категории */}
@@ -437,7 +450,7 @@ export default function ProfilePage() {
                         <h4 className="text-lg font-medium mt-6 mb-3">Активные прокси</h4>
                         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                           {/* Активный прокси #1 */}
-                          <Card className="bg-black/40 backdrop-blur-md border border-green-500/20">
+                          <Card className="bg-black/40 backdrop-blur-md border border-green-500/30">
                             <CardHeader className="pb-2">
                               <div className="flex justify-between items-center">
                                 <CardTitle className="text-base flex items-center">
@@ -482,7 +495,7 @@ export default function ProfilePage() {
                           </Card>
 
                           {/* Активный прокси #2 */}
-                          <Card className="bg-black/40 backdrop-blur-md border border-green-500/20">
+                          <Card className="bg-black/40 backdrop-blur-md border border-green-500/30">
                             <CardHeader className="pb-2">
                               <div className="flex justify-between items-center">
                                 <CardTitle className="text-base flex items-center">
@@ -623,12 +636,12 @@ export default function ProfilePage() {
                           У вас пока нет прокси в истории. Создайте свой первый прокси,
                           чтобы начать работу.
                         </p>
-                        <Button>Создать прокси</Button>
+                        <Button>Купить конфигурацию</Button>
                       </div>
                     )}
 
                     {/* Статистика использования */}
-                    <div className="bg-black/40 backdrop-blur-md border border-green-500/20 rounded-lg p-6 mt-8">
+                    <div className="bg-black/40 backdrop-blur-md border border-green-500/30 rounded-lg p-6 mt-8">
                       <h4 className="text-lg font-medium mb-4">Статистика использования</h4>
                       <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
                         <div className="p-4 bg-black/40 rounded-lg">

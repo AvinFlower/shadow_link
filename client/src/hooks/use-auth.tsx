@@ -9,6 +9,17 @@ import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from 'wouter';  // Импортируем useLocation
 
+
+type LoginData = Pick<InsertUser, "username" | "password">;
+
+type UpdateProfileData = {
+  id: number;
+  username?: string;
+  email?: string;
+  currentPassword?: string;
+  newPassword?: string;
+};
+
 type AuthContextType = {
   user: SelectUser | null;
   isLoading: boolean;
@@ -16,11 +27,10 @@ type AuthContextType = {
   loginMutation: UseMutationResult<SelectUser, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
   registerMutation: UseMutationResult<SelectUser, Error, InsertUser>;
-  updateProfileMutation: UseMutationResult<SelectUser, Error, Partial<SelectUser>>;
+  // <- здесь заменяем Partial<SelectUser>… на наш UpdateProfileData
+  updateProfileMutation: UseMutationResult<SelectUser, Error, UpdateProfileData>;
   addCreditsMutation: UseMutationResult<SelectUser, Error, { amount: number }>;
 };
-
-type LoginData = Pick<InsertUser, "username" | "password">;
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 
@@ -36,6 +46,12 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
 
   const [location, navigate] = useLocation();  // Правильная деструктуризация
+
+  async function checkCurrentPassword(password: string): Promise<boolean> {
+    const res = await apiRequest("POST", "/api/check-password", { password });
+    const { isPasswordCorrect } = await res.json();
+    return isPasswordCorrect;
+  }
 
   const loginMutation = useMutation({
     mutationFn: async (credentials: LoginData) => {
@@ -123,12 +139,46 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
   
   
-  const updateProfileMutation = useMutation({
-    mutationFn: async (profileData: Partial<SelectUser>) => {
-      const res = await apiRequest("POST", "http://localhost:4000/api/profile", profileData);
-      return await res.json();
+  const updateProfileMutation = useMutation<SelectUser, Error, UpdateProfileData>({
+    mutationFn: async (profileData) => {
+      const { id, currentPassword, newPassword, ...rest } = profileData;
+  
+      // Если меняем пароль
+      if (currentPassword && newPassword) {
+        const res = await fetch("http://localhost:4000/api/change-password", {
+          method: "POST",
+          credentials: "include",               // <-- обязательно
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({
+            old_password: currentPassword,
+            new_password: newPassword,
+          }),
+        });
+        if (!res.ok) {
+          const err = await res.json();
+          throw new Error(err.message);
+        }
+        return res.json();
+      }
+  
+      // Иначе просто обновляем профиль
+      const res = await fetch(`http://localhost:4000/api/users/${id}`, {
+        method: "PUT",
+        credentials: "include",               // <-- и здесь
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(rest),
+      });
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.message);
+      }
+      return res.json();
     },
-    onSuccess: (user: SelectUser) => {
+    onSuccess: (user) => {
       queryClient.setQueryData(["/api/user"], user);
       toast({
         title: "Профиль обновлен",
@@ -136,7 +186,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         variant: "default",
       });
     },
-    onError: (error: Error) => {
+    onError: (error) => {
       toast({
         title: "Ошибка обновления",
         description: error.message,
@@ -144,6 +194,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
   });
+  
   
   const addCreditsMutation = useMutation({
     mutationFn: async ({ amount }: {amount: number}) => {

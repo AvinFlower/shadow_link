@@ -199,6 +199,7 @@ def get_user_by_id(user_id):
     except Exception as e:
         return make_response(jsonify({'message': 'Error getting user', 'error': str(e)}), 500)
 
+
 # Обновление пользователя
 @app.route('/api/users/<int:user_id>', methods=['PUT'])
 @login_required
@@ -206,14 +207,46 @@ def update_user(user_id):
     try:
         data = request.get_json()
         user = User.query.get(user_id)
-        if user:
-            user.username = data.get('username', user.username)
-            user.email = data.get('email', user.email)
-            db.session.commit()
-            return jsonify(user.to_json()), 200
-        return jsonify({'message': 'User not found'}), 404
+        if not user:
+            return jsonify({'message': 'User not found'}), 404
+
+        # Обновляем только те поля, которые пришли
+        if 'username' in data:
+            user.username = data['username']
+        if 'email' in data:
+            user.email = data['email']
+        if 'full_name' in data:
+            user.full_name = data['full_name']
+        if 'birth_date' in data:
+            user.birth_date = datetime.strptime(data['birth_date'], "%d.%m.%Y")
+        if 'role' in data:
+            user.role = data['role']
+        if 'proxy_credits' in data:
+            user.proxy_credits = data['proxy_credits']
+        if 'password' in data:
+            user.set_password(data['password'])  # Используем метод set_password!
+
+        db.session.commit()
+        return jsonify(user.to_json()), 200
+
     except Exception as e:
         return jsonify({'message': 'Error updating user', 'error': str(e)}), 500
+
+
+#Изменение пароля
+@app.route('/api/change-password', methods=['POST'])
+@login_required
+def change_password():
+    data = request.get_json()
+    old = data.get('old_password')
+    new = data.get('new_password')
+    if not current_user.check_password(old):
+        return make_response(jsonify({'message': 'Неверный текущий пароль'}), 400)
+    current_user.set_password(new)
+    db.session.commit()
+    return jsonify(current_user.to_json()), 200
+
+
 
 # Удаление пользователя
 @app.route('/api/users/<int:user_id>', methods=['DELETE'])
