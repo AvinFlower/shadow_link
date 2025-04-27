@@ -67,6 +67,8 @@ type TabKey = "profile" | "credits" | "proxies";
 export default function ProfilePage() {
   const { user, updateProfileMutation } = useAuth();
   const [activeTab, setActiveTab] = useState<TabKey>("profile");
+  const [proxyFilter, setProxyFilter] = useState<"all"|"active"|"expired">("all");
+  const [paymentMethod, setPaymentMethod] = useState<"card"|"wallet"|"crypto">("card");
 
   // Новая мутация для покупки прокси с явными типами
   const purchaseProxyMutation = useMutation<
@@ -301,54 +303,84 @@ export default function ProfilePage() {
                     <div>
                       <h3 className="text-xl font-semibold mb-4">Способы оплаты</h3>
                       <div className="space-y-4">
-                        <div className="p-4 border border-green-500/30 rounded-lg flex justify-between items-center">
+                        {/* Банковская карта */}
+                        <div
+                          onClick={() => setPaymentMethod("card")}
+                          className={`p-4 rounded-lg flex justify-between items-center cursor-pointer
+                            ${paymentMethod === "card"
+                              ? "border-green-500/50 bg-green-500/10"
+                              : "border-green-500/30"
+                            }`}
+                        >
                           <div className="flex gap-3 items-center">
                             <div className="h-10 w-10 rounded-full bg-blue-500/20 flex items-center justify-center">
                               <CreditCard className="h-5 w-5 text-blue-500" />
                             </div>
                             <div>
                               <h4 className="font-semibold">Банковская карта</h4>
-                              <p className="text-sm text-gray-400">
-                                Visa, Mastercard, Mir
-                              </p>
+                              <p className="text-sm text-gray-400">Visa, Mastercard, Mir</p>
                             </div>
                           </div>
-                          <Button variant="outline" size="sm">
-                            Выбрать
+                          <Button
+                            variant={paymentMethod === "card" ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setPaymentMethod("card")}
+                          >
+                            {paymentMethod === "card" ? "Выбрано" : "Выбрать"}
                           </Button>
                         </div>
-                                        
-                        <div className="p-4 border border-green-500/30 rounded-lg flex justify-between items-center">
+                          
+                        {/* Электронные кошельки */}
+                        <div
+                          onClick={() => setPaymentMethod("wallet")}
+                          className={`p-4 rounded-lg flex justify-between items-center cursor-pointer
+                            ${paymentMethod === "wallet"
+                              ? "border-green-500/50 bg-green-500/10"
+                              : "border-green-500/30"
+                            }`}
+                        >
                           <div className="flex gap-3 items-center">
                             <div className="h-10 w-10 rounded-full bg-purple-500/20 flex items-center justify-center">
                               <Globe className="h-5 w-5 text-purple-500" />
                             </div>
                             <div>
                               <h4 className="font-semibold">Электронные кошельки</h4>
-                              <p className="text-sm text-gray-400">
-                                PayPal, Qiwi, WebMoney
-                              </p>
+                              <p className="text-sm text-gray-400">PayPal, Qiwi, WebMoney</p>
                             </div>
                           </div>
-                          <Button variant="outline" size="sm">
-                            Выбрать
+                          <Button
+                            variant={paymentMethod === "wallet" ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setPaymentMethod("wallet")}
+                          >
+                            {paymentMethod === "wallet" ? "Выбрано" : "Выбрать"}
                           </Button>
                         </div>
-                                        
-                        <div className="p-4 border border-green-500/30 rounded-lg flex justify-between items-center">
+                          
+                        {/* Криптовалюты */}
+                        <div
+                          onClick={() => setPaymentMethod("crypto")}
+                          className={`p-4 rounded-lg flex justify-between items-center cursor-pointer
+                            ${paymentMethod === "crypto"
+                              ? "border-green-500/50 bg-green-500/10"
+                              : "border-green-500/30"
+                            }`}
+                        >
                           <div className="flex gap-3 items-center">
                             <div className="h-10 w-10 rounded-full bg-orange-500/20 flex items-center justify-center">
                               <Server className="h-5 w-5 text-orange-500" />
                             </div>
                             <div>
                               <h4 className="font-semibold">Криптовалюты</h4>
-                              <p className="text-sm text-gray-400">
-                                Bitcoin, Ethereum, USDT
-                              </p>
+                              <p className="text-sm text-gray-400">Bitcoin, Ethereum, USDT</p>
                             </div>
                           </div>
-                          <Button variant="outline" size="sm">
-                            Выбрать
+                          <Button
+                            variant={paymentMethod === "crypto" ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => setPaymentMethod("crypto")}
+                          >
+                            {paymentMethod === "crypto" ? "Выбрано" : "Выбрать"}
                           </Button>
                         </div>
                       </div>
@@ -428,14 +460,26 @@ export default function ProfilePage() {
                     </div>
 
                     {/* Фильтры и категории */}
-                    <div className="flex flex-wrap gap-3">
-                      <Button variant="outline" className="bg-green-500/10 border-green-500/30 text-green-500">
+                    <div className="flex flex-wrap gap-3 mb-4">
+                      <Button
+                        variant="outline"
+                        className={proxyFilter === "all" ? "bg-green-500/10 border-green-500/30 text-green-500" : ""}
+                        onClick={() => setProxyFilter("all")}
+                      >
                         Все прокси
                       </Button>
-                      <Button variant="outline">
+                      <Button
+                        variant="outline"
+                        className={proxyFilter === "active" ? "bg-green-500/10 border-green-500/30 text-green-500" : ""}
+                        onClick={() => setProxyFilter("active")}
+                      >
                         Активные
                       </Button>
-                      <Button variant="outline">
+                      <Button
+                        variant="outline"
+                        className={proxyFilter === "expired" ? "bg-red-500/10 border-red-500/30 text-red-500" : ""}
+                        onClick={() => setProxyFilter("expired")}
+                      >
                         Истекшие
                       </Button>
                     </div>
@@ -633,40 +677,16 @@ export default function ProfilePage() {
                         <Server className="h-16 w-16 text-gray-400 mx-auto mb-4" />
                         <h3 className="text-xl font-medium mb-2">История прокси пуста</h3>
                         <p className="text-gray-400 mb-4">
-                          У вас пока нет прокси в истории. Создайте свой первый прокси,
+                          У вас пока нет прокси в истории. Купите свою первую конфигурацию,
                           чтобы начать работу.
                         </p>
-                        <Button>Купить конфигурацию</Button>
+                        <Button type="button" onClick={() => setActiveTab("credits")}>
+                          Купить конфигурацию
+                        </Button>
                       </div>
                     )}
-
-                    {/* Статистика использования */}
-                    <div className="bg-black/40 backdrop-blur-md border border-green-500/30 rounded-lg p-6 mt-8">
-                      <h4 className="text-lg font-medium mb-4">Статистика использования</h4>
-                      <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-                        <div className="p-4 bg-black/40 rounded-lg">
-                          <div className="text-gray-400 text-sm mb-1">Всего запросов</div>
-                          <div className="text-2xl font-bold text-green-500">1,257</div>
-                          <div className="text-xs text-gray-400 mt-1">+173 с прошлой недели</div>
-                        </div>
-                        
-                        <div className="p-4 bg-black/40 rounded-lg">
-                          <div className="text-gray-400 text-sm mb-1">Использовано данных</div>
-                          <div className="text-2xl font-bold text-green-500">428 MB</div>
-                          <div className="text-xs text-gray-400 mt-1">+62 MB с прошлой недели</div>
-                        </div>
-                        
-                        <div className="p-4 bg-black/40 rounded-lg">
-                          <div className="text-gray-400 text-sm mb-1">Активных прокси</div>
-                          <div className="text-2xl font-bold text-green-500">2</div>
-                          <div className="text-xs text-gray-400 mt-1">из 4 за все время</div>
-                        </div>
-                      </div>
-                    </div>
                   </div>
                 </TabsContent>
-
-
 
               </Tabs>
             </CardContent>

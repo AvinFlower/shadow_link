@@ -139,10 +139,10 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
   
   
-  const updateProfileMutation = useMutation<SelectUser, Error, UpdateProfileData>({
+  const updateProfileMutation = useMutation<SelectUser, Error, UpdateProfileData, { changes: string[] }>({
     mutationFn: async (profileData) => {
       const { id, currentPassword, newPassword, ...rest } = profileData;
-  
+    
       // Если меняем пароль
       if (currentPassword && newPassword) {
         const res = await fetch("http://localhost:4000/api/change-password", {
@@ -162,7 +162,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         return res.json();
       }
-  
+    
       // Иначе просто обновляем профиль
       const res = await fetch(`http://localhost:4000/api/users/${id}`, {
         method: "PUT",
@@ -178,13 +178,41 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       }
       return res.json();
     },
-    onSuccess: (user) => {
+    onMutate: async (profileData) => {
+      // 1) отменяем все запросы к /api/user, чтобы не было гонки
+      await queryClient.cancelQueries({ queryKey: ["/api/user"] });
+  
+      // 2) достаём старые данные
+      const previousUser = queryClient.getQueryData<SelectUser>(["/api/user"]);
+  
+      // 3) считаем, что именно поменялось
+      const changes: string[] = [];
+      if (previousUser) {
+        if (profileData.username && profileData.username !== previousUser.username) {
+          changes.push("имя пользователя");
+        }
+        if (profileData.email && profileData.email !== previousUser.email) {
+          changes.push("email");
+        }
+        if (profileData.currentPassword && profileData.newPassword) {
+          changes.push("пароль");
+        }
+      }
+  
+      return { previousUser, changes };
+    },
+    onSuccess: (user, _variables, context) => {
+      // обновляем кэш
       queryClient.setQueryData(["/api/user"], user);
-      toast({
-        title: "Профиль обновлен",
-        description: "Ваши данные успешно обновлены",
-        variant: "default",
-      });
+      
+      // выводим тост только если есть изменения
+      if (context.changes.length > 0) {
+        toast({
+          title: "Изменения применены",
+          description: `Изменено: ${context.changes.join(", ")}`,
+          variant: "default",
+        });
+      }
     },
     onError: (error) => {
       toast({
