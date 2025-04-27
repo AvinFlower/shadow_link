@@ -3,8 +3,24 @@ import { Shield, Zap, Lock, Globe, LifeBuoy, BarChart4, Server, Clock, RefreshCw
 import FeatureCard from '@/components/FeatureCard';
 import { motion } from 'framer-motion';
 import { Button } from '@/components/ui/button';
+import { useLocation } from 'wouter';  // Импортируем для навигации
+import { useAuth } from '@/hooks/use-auth'; // Импортируем для проверки авторизации
 
 const Features: React.FC = () => {
+
+  const { user } = useAuth(); // Получаем данные пользователя из контекста
+  const [, navigate] = useLocation(); // Навигация с помощью useLocation
+
+  const handleButtonClick = () => {
+    if (user) {
+      // Если пользователь авторизован, переходим в профиль
+      navigate('/profile');
+    } else {
+      // Если пользователь не авторизован, переходим на страницу логина
+      navigate('/auth');
+    }
+  };
+
   // Расширенный список функций
   const features = [
     {
@@ -149,6 +165,7 @@ const Features: React.FC = () => {
           <Button 
             size="lg"
             className="bg-primary hover:bg-primary/80 text-primary-foreground font-semibold rounded-full px-8 py-6 transition duration-300 transform hover:scale-105"
+            onClick={handleButtonClick} // Добавляем обработчик клика для перехода
           >
             Начать Сегодня
           </Button>
