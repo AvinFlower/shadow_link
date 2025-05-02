@@ -4,5 +4,8 @@ Flask-SQLAlchemy
 flask-cors
 Flask-CORS
 flask-login
+flask_bcrypt
 werkzeug
 datetime
+wraps
+uuid

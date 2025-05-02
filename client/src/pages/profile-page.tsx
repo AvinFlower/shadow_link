@@ -3,6 +3,7 @@ import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { useAuth } from "@/hooks/use-auth";
+import { Link } from 'wouter';
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
@@ -273,10 +274,27 @@ export default function ProfilePage() {
                               </p>
                             </div>
                           )}
+
                         </div>
                       </div>
                         
-                      <div className="flex justify-end">
+                      <div className="flex justify-end space-x-2">
+
+                        {/* Если роль администратора, отображаем кнопку для перехода на админ-панель */}
+                        {/*{user?.role === "admin" && (
+                          <Link href="/admin">
+                            <Button>Перейти в панель администрирования</Button>
+                          </Link>
+                        )}*/}
+
+                        {user?.role === "admin" && (
+                          <Button
+                            onClick={() => window.open("https://vk.com", "_blank")}
+                          >
+                            Перейти в панель администрирования
+                          </Button>
+                        )}
+
                         <Button
                           type="submit"
                           disabled={updateProfileMutation.isPending}
