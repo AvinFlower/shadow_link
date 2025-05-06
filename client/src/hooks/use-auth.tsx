@@ -21,7 +21,20 @@ export type GetConfigResponse = {
 }[];
 
 
-type LoginData = Pick<InsertUser, "username" | "password">;
+// type LoginData = Pick<InsertUser, "username" | "password">;
+// // Типы данных для логина и регистрации
+interface LoginData {
+  username: string;
+  password: string;
+}
+
+interface RegisterData {
+  username: string;
+  email: string;
+  password: string;
+  full_name: string;
+  birth_date: string;
+}
 
 type UpdateProfileData = {
   id: number;
@@ -58,14 +71,14 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           try {
               // напрямую через apiRequest, чтобы сразу авторизационный заголовок повесить
               const res = await apiRequest("GET", "http://localhost:4000/api/profile");
-          
+
               if (!res.ok) {
                   if (res.status === 401) {
                       return null;  // если ошибка 401, возвращаем null
                   }
                   throw new Error("Ошибка при получении профиля");
               }
-            
+
               return (await res.json()) as SelectUser;
           } catch (err) {
               // Обрабатываем ошибку в queryFn
@@ -85,15 +98,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   }
 
   const loginMutation = useMutation<SelectUser, Error, LoginData>({
-    mutationFn: async (credentials) => {
+    mutationFn: async ({ username, password }) => {
       // Выводим, что отправляем
-      console.log("Login payload:", credentials);
+      console.log("Login payload:", { username, password });
   
       // Передаём только данные, apiRequest сам добавит Content-Type и credentials
       const res = await apiRequest(
         "POST",
         "http://localhost:4000/api/login",
-        credentials
+        { username, password }
       );
   
       // Раз JSON уже проверен на ok, просто парсим
@@ -104,14 +117,15 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       return data.user as SelectUser;
     },
     onSuccess: (user) => {
-      // Обновляем кэш и редиректим
       queryClient.setQueryData(["/api/user"], user);
+      queryClient.invalidateQueries({ queryKey: ["/api/user"] }); // Инвалидация кэша пользователя
       toast({
         title: "Вход выполнен успешно",
         description: `Добро пожаловать, ${user.username}!`,
         variant: "default",
       });
-      navigate("/profile");  // ← здесь переход в профиль
+      // Перенаправление на профиль
+      window.location.href = "/profile";
     },
     onError: (error: Error) => {
       toast({
@@ -122,28 +136,26 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     },
   });
   
-  
-
-  const registerMutation = useMutation({
-    mutationFn: async (credentials: InsertUser) => {
+  const registerMutation = useMutation<SelectUser, Error, RegisterData>({
+    mutationFn: async ({ username, email, password, full_name, birth_date }) => {
       // Проверка обязательных полей
-      if (!credentials.username || !credentials.email || !credentials.password || !credentials.birth_date) {
+      if (!username || !email || !password || !birth_date || !full_name) {
         throw new Error("Все поля обязательны для заполнения");
       }
   
       // Форматирование даты (YYYY-MM-DD → DD.MM.YYYY)
-      if (credentials.birth_date.includes('-')) {
-        const [year, month, day] = credentials.birth_date.split('-');
-        credentials.birth_date = `${day}.${month}.${year}`;
+      if (birth_date.includes('-')) {
+        const [year, month, day] = birth_date.split('-');
+        birth_date = `${day}.${month}.${year}`;
       }
   
-      console.log("Отправляемые данные:", credentials);
+      console.log("Отправляемые данные:", { username, email, password, full_name, birth_date });
   
       // Правильный вызов apiRequest
       const res = await apiRequest(
         "POST",
         "http://localhost:4000/api/register",
-        credentials
+        { username, email, password, full_name, birth_date }
       );
   
       // Теперь res.ok уже гарантирован, получаем JSON
@@ -160,6 +172,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         description: "Аккаунт успешно создан!",
         variant: "default",
       });
+      window.location.href = "/profile";
     },
     onError: (error) => {
       toast({
@@ -172,24 +185,28 @@ export function AuthProvider({ children }: { children: ReactNode }) {
 
   const logoutMutation = useMutation({
     mutationFn: async () => {
-      await apiRequest("POST", "http://localhost:4000/api/logout", {
-        credentials: 'include',
-      });
+      const response = await apiRequest("POST", "http://localhost:4000/api/logout");
+  
+      if (!response.ok) {
+        throw new Error("Не удалось выйти");
+      }
+  
+      // Очистка токена и кэша
+      localStorage.removeItem('access_token');
+      sessionStorage.removeItem('access_token');
+      queryClient.setQueryData(["/api/user"], null);
+  
+      document.cookie = "token=; Max-Age=0";  // Очистка куки
     },
     onSuccess: () => {
-      queryClient.setQueryData(["/api/user"], null);
-      localStorage.removeItem('user');
-      sessionStorage.removeItem('user');
-    
       toast({
         title: "Выход выполнен",
         description: "Вы успешно вышли из аккаунта",
         variant: "default",
       });
   
-      setTimeout(() => {
-        window.location.href = "/auth";  // Принудительный редирект
-      }, 200);
+      // Редирект на страницу входа
+      window.location.href = "/auth";
     },
     onError: (error: Error) => {
       toast({
@@ -240,8 +257,13 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         }
         return { previousUser, changes };
       },
-      onSuccess: (user, _vars, context) => {
+      onSuccess: (user, _vars, context) => {  
+        // Обновляем кэш вручную
         queryClient.setQueryData(["/api/user"], user);
+      
+        // Дополнительно форсируем рефетч запроса (перезагрузка данных)
+        queryClient.invalidateQueries({ queryKey: ["/api/user"] });
+      
         if (context.changes.length) {
           toast({
             title: "Изменения применены",
@@ -263,39 +285,52 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     });
   
-  const createConfigMutation = useMutation<CreateConfigResponse>({
-    mutationFn: async () => {
-      if (!user) throw new Error("Пользователь не найден");
-  
-      const res = await apiRequest(
-        "POST",
-        `http://localhost:4000/api/users/${user.id}/configurations`,
-        { credentials: "include" }
-      );
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.message || "Ошибка генерации конфигурации");
-      return data as CreateConfigResponse;
-    },
-    onSuccess: (data) => {
-      toast({
-        title: "Конфигурация создана",
-        description: `Срок действия: ${new Date(data.expiration_date).toLocaleString()}`,
-        variant: "default",
-      });
-  
-      // 1) Сбрасываем кэш списка конфигураций
-      queryClient.invalidateQueries({ queryKey: ["configurations", user!.id] });
-      // 2) Переключаем вкладку профиля на «proxies»
-      navigate("/profile?tab=proxies"); // или setActiveTab внутри ProfilePage
-    },
-    onError: (error: Error) => {
-      toast({
-        title: "Ошибка генерации",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+const createConfigMutation = useMutation<CreateConfigResponse>({
+  mutationFn: async () => {
+    if (!user) throw new Error("Пользователь не найден");
+
+    // Получаем токен (например, из localStorage, или получаем его как-то по-другому)
+    const token = localStorage.getItem("jwt_token");
+
+    if (!token) throw new Error("Необходим токен для авторизации");
+
+    const res = await apiRequest(
+      "POST",
+      `http://localhost:4000/api/users/${user.id}/configurations`,
+      {
+        headers: {
+          "Authorization": `Bearer ${token}`, // Добавляем токен в заголовок
+        },
+        credentials: "include",
+      }
+    );
+    const data = await res.json();
+    if (!res.ok) throw new Error(data.message || "Ошибка генерации конфигурации");
+    return data as CreateConfigResponse;
+  },
+
+  onSuccess: (data) => {
+    toast({
+      title: "Конфигурация создана",
+      description: `Срок действия: ${new Date(data.expiration_date).toLocaleString()}`,
+      variant: "default",
+    });
+
+    // 1) Сбрасываем кэш списка конфигураций
+    queryClient.invalidateQueries({ queryKey: ["configurations", user!.id] });
+    // 2) Переключаем вкладку профиля на «proxies»
+    navigate("/profile?tab=proxies"); // или setActiveTab внутри ProfilePage
+  },
+
+  onError: (error: Error) => {
+    toast({
+      title: "Ошибка генерации",
+      description: error.message,
+      variant: "destructive",
+    });
+  },
+});
+
   
   return (
     <AuthContext.Provider

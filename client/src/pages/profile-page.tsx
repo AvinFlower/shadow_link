@@ -45,25 +45,6 @@ import {
 } from "lucide-react";
 import { motion } from "framer-motion";
 
-export async function apiRequest(method: string, url: string, options?: RequestInit) {
-  const token = localStorage.getItem('access_token');  // Получаем токен из localStorage
-
-  const config: RequestInit = {
-    method,
-    ...options,
-    headers: {
-      "Authorization": `Bearer ${token}`,  // Добавляем токен в заголовок
-      ...options?.headers,  // сохраняем другие заголовки, если они есть
-    },
-  };
-
-  if (method === "GET" || method === "HEAD") {
-    delete config.body; // Убедимся, что body не попадает в GET
-  }
-
-  return fetch(url, config);
-}
-
 // Schemas
 const profileSchema = z.object({
   username: z.string().min(2),
@@ -99,7 +80,22 @@ export default function ProfilePage() {
   const [activeTab, setActiveTab] = useState<TabKey>("profile");
   const [paymentMethod, setPaymentMethod] = useState<"card"|"wallet"|"crypto">("card");
   const [proxyFilter, setProxyFilter] = useState<"all"|"active"|"expired">("all");
+  const [profileData, setProfileData] = useState<ProfileValues>({
+    username: user?.username || "",
+    email: user?.email || "",
+  })
+  const [username, setUsername] = useState(user?.username || ""); // Добавляем состояние для имени
+  const [notification, setNotification] = useState<string | null>(null);
 
+  useEffect(() => {
+    // При загрузке страницы проверяем, есть ли флаг об успешном обновлении в sessionStorage
+    const storedNotification = sessionStorage.getItem("profileUpdateNotification");
+    if (storedNotification) {
+      setNotification(storedNotification);
+      // Удаляем уведомление из sessionStorage, чтобы не показывать его снова
+      sessionStorage.removeItem("profileUpdateNotification");
+    }
+  }, []);
 
   const { data: configs, isLoading: configsLoading, error: configsError } = useQuery<GetConfigResponse>({
     queryKey: ["configurations", user?.id],
@@ -156,7 +152,7 @@ export default function ProfilePage() {
   // Формы
   const profileForm = useForm<ProfileValues>({
     resolver: zodResolver(profileSchema),
-    defaultValues: { username: user?.username || "", email: user?.email || "" },
+    defaultValues: profileData, // Используем данные из стейта
   });
   const purchaseForm = useForm<ProxyPurchaseValues>({
     resolver: zodResolver(proxyPurchaseSchema),
@@ -184,20 +180,40 @@ export default function ProfilePage() {
   }, [computedPrice]);
 
   // Хендлеры
-  function onProfileSubmit(data: ProfileValues) {
+  const onProfileSubmit = (data: ProfileValues) => {
     if (!user?.id) return;
+  
     const { currentPassword, newPassword, ...profileData } = data;
   
     const token = localStorage.getItem('access_token'); // Получаем токен из localStorage
   
-    updateProfileMutation.mutate({
-      id: user.id,
-      ...profileData,
-      ...(newPassword && currentPassword
-        ? { currentPassword, newPassword }
-        : {}),
-    });
-  }
+    updateProfileMutation.mutate(
+      {
+        id: user.id,
+        ...profileData,
+        ...(newPassword && currentPassword
+          ? { currentPassword, newPassword }
+          : {}),
+      },
+      {
+        onSuccess: (data) => {
+          // Обновляем локальные данные пользователя после успешного обновления
+          setProfileData({
+            username: data.username, // Обновляем имя пользователя
+            email: data.email,
+          });
+
+          window.location.reload();
+          
+          // // Обновляем локальное состояние для имени пользователя
+          // setUsername(data.username); // Обновляем имя пользователя на экране
+        },
+        onError: (error) => {
+          console.error("Ошибка обновления профиля:", error);
+        },
+      }
+    );
+  };
   
 
   function onPurchaseSubmit(data: ProxyPurchaseValues) {
@@ -259,7 +275,7 @@ export default function ProfilePage() {
                               <User className="h-8 w-8 text-green-500" />
                             </div>
                             <div>
-                              <div className="text-xl font-bold">{user?.username}</div>
+                              <div className="text-xl font-bold">{username}</div> {/* Используем локальное состояние */}
                               <span className="font-medium flex items-center gap-1 text-green-500">
                                 {user?.role === "admin" ? "Администратор" : "Пользователь"}
                                 <Shield className="h-4 w-4" />
@@ -277,7 +293,7 @@ export default function ProfilePage() {
                                   <FormItem>
                                     <FormLabel>Имя пользователя</FormLabel>
                                     <FormControl>
-                                      <Input placeholder="cool_username" {...field} />
+                                      <Input placeholder="My Username" {...field} />
                                     </FormControl>
                                     <FormMessage />
                                   </FormItem>
@@ -302,34 +318,42 @@ export default function ProfilePage() {
                           {/* Смена пароля */}
                           <div className="bg-black/30 p-4 rounded-lg mb-6">
                             <div className="text-xl font-medium mb-4">Смена пароля</div>
-                              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
-                                <FormField
-                                  control={profileForm.control}
-                                  name="currentPassword"
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Текущий пароль</FormLabel>
-                                      <FormControl>
-                                        <Input type="password" placeholder="Введите текущий пароль" {...field} />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-                                <FormField
-                                  control={profileForm.control}
-                                  name="newPassword"
-                                  render={({ field }) => (
-                                    <FormItem>
-                                      <FormLabel>Новый пароль</FormLabel>
-                                      <FormControl>
-                                        <Input type="password" placeholder="Введите новый пароль" {...field} />
-                                      </FormControl>
-                                      <FormMessage />
-                                    </FormItem>
-                                  )}
-                                />
-                              </div>
+                            <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                              <FormField
+                                control={profileForm.control}
+                                name="currentPassword"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Текущий пароль</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        type="password"
+                                        placeholder="Введите текущий пароль"
+                                        {...field}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                              <FormField
+                                control={profileForm.control}
+                                name="newPassword"
+                                render={({ field }) => (
+                                  <FormItem>
+                                    <FormLabel>Новый пароль</FormLabel>
+                                    <FormControl>
+                                      <Input
+                                        type="password"
+                                        placeholder="Введите новый пароль"
+                                        {...field}
+                                      />
+                                    </FormControl>
+                                    <FormMessage />
+                                  </FormItem>
+                                )}
+                              />
+                            </div>
                           </div>
                               
                           {/* Дата рождения */}

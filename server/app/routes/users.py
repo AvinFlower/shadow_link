@@ -109,28 +109,25 @@ def delete_user(user_id):
 @users_bp.route('/users/<int:user_id>/configurations', methods=['POST'])
 @jwt_required()
 def create_configuration(user_id):
-    data = request.get_json() or {}
-    current_user_id = int(get_jwt_identity())
-    if current_user_id != user_id:
-        return jsonify({"error": "Unauthorized"}), 403
-
-    user = User.query.get(user_id)
-    if not user:
-        return jsonify({"error": "User not found"}), 404
-
+    # Генерация уникального email на основе UUID
+    unique_email = f"UnknownSoldier_{str(uuid.uuid4())[:8]}"  # Пример: user_9f8b8f82@example.com
     new_uuid = str(uuid.uuid4())
     port_number = int(os.environ.get("PORT_SUBSCRIPTION", 32955))
     flow = os.environ.get("FLOW", "xtls-rprx-vision")
-
+    
     try:
-        insert_inbound_record(email=user.email, new_uuid=new_uuid, port_number=port_number, flow=flow)
-        insert_traffic_record(email=user.email, port_number=port_number)
+        insert_inbound_record(email=unique_email, new_uuid=new_uuid, port_number=port_number, flow=flow, user_id=user_id)
+        insert_traffic_record(email=unique_email, port_number=port_number)
         restart_xui()
 
-        link = generate_vless_link(email=user.email, new_uuid=new_uuid, port_number=port_number, flow=flow)
-        expiration = datetime.now(timezone.utc) + relativedelta(months=1)
+        link = generate_vless_link(email=unique_email, new_uuid=new_uuid, port_number=port_number, flow=flow)
 
-        config = UserConfiguration(user_id=user.id, config_link=link, expiration_date=expiration)
+        config = UserConfiguration(
+            user_id=user_id,
+            client_uuid=new_uuid,
+            config_link=link,
+            expiration_date=expiration
+        )
         db.session.add(config)
         db.session.commit()
 
@@ -138,7 +135,6 @@ def create_configuration(user_id):
             "config_link": link,
             "expiration_date": expiration.isoformat()
         }), 201
-
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500

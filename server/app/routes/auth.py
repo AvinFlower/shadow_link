@@ -3,7 +3,7 @@ from flask import Blueprint, request, jsonify, make_response
 from ..models.user import User
 from ..extensions import db
 from datetime import datetime, timedelta
-from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity
+from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
 
 auth_bp = Blueprint('auth', __name__, url_prefix='/api')
 
@@ -85,8 +85,13 @@ def login():
 @auth_bp.route('/logout', methods=['POST'])
 @jwt_required()
 def logout():
-    # JWT — это stateless: logout здесь условный
-    return jsonify({'message': 'Logged out successfully (client must discard the token)'}), 200
+    jti = get_jwt()['jti']  # Получаем уникальный идентификатор токена
+    expiration_time = datetime.utcnow()  # Время аннулирования токена
+
+    resp = jsonify({'message': 'Logged out successfully'})
+    resp.set_cookie('token', '', expires=0)  # Удаляем куку с токеном на клиенте
+
+    return resp, 200
 
 
 @auth_bp.route('/change-password', methods=['POST'])
