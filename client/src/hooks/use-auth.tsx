@@ -17,6 +17,7 @@ export type CreateConfigResponse = {
 export type GetConfigResponse = {
   config_link: string;
   expiration_date: string;
+  created_at: string;
 }[];
 
 

@@ -1,4 +1,5 @@
 import React, { useState, useMemo, useEffect } from "react";
+import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { z } from "zod";
 import { useForm } from "react-hook-form";
 import { zodResolver } from "@hookform/resolvers/zod";
@@ -7,6 +8,7 @@ import { Link } from 'wouter';
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
+import { AiOutlineCopy } from 'react-icons/ai';
 
 import { GetConfigResponse } from "@/hooks/use-auth"; // Путь к файлу с типами, где определён GetConfigResponse
 import {
@@ -80,45 +82,46 @@ type PurchaseVars = { country: string; duration: number; amount: number };
 
 type TabKey = "profile" | "credits" | "proxies";
 
+
+
+
+
 export default function ProfilePage() {
   const { user, updateProfileMutation } = useAuth();
   const { createConfigMutation } = useAuth();
   const [activeTab, setActiveTab] = useState<TabKey>("profile");
-  const [proxyFilter, setProxyFilter] = useState<"all"|"active"|"expired">("all");
   const [paymentMethod, setPaymentMethod] = useState<"card"|"wallet"|"crypto">("card");
+  const [proxyFilter, setProxyFilter] = useState<"all"|"active"|"expired">("all");
 
 
-  // 1) Запрос всех конфигураций
-const { data: configs, isLoading: configsLoading, error: configsError } = useQuery<GetConfigResponse>({
-  queryKey: ["configurations", user?.id],
-  queryFn: async () => {
-    if (!user) throw new Error("Неавторизован");
-
-    const res = await fetch(
-      `http://localhost:4000/api/users/${user.id}/configurations`,
-      {
-        method: "GET",
-        credentials: "include",
-        headers: { "Content-Type": "application/json" },
+  const { data: configs, isLoading: configsLoading, error: configsError } = useQuery<GetConfigResponse>({
+    queryKey: ["configurations", user?.id],
+    queryFn: async () => {
+      if (!user) throw new Error("Неавторизован");
+    
+      const res = await fetch(
+        `http://localhost:4000/api/users/${user.id}/configurations`,
+        {
+          method: "GET",
+          credentials: "include",
+          headers: { "Content-Type": "application/json" },
+        }
+      );
+    
+      if (!res.ok) {
+        const t = await res.text();
+        console.error("API error:", t);
+        throw new Error(`Ошибка ${res.status}`);
       }
-    );
-
-    if (!res.ok) {
-      const t = await res.text();
-      console.error("API error:", t);
-      throw new Error(`Ошибка ${res.status}`);
-    }
-
-    // Получаем payload
-    const payload = await res.json();
-
-    // Если вернулся не массив — оборачиваем в массив
-    return Array.isArray(payload) ? payload : [payload] as GetConfigResponse;
-  },
-  enabled: !!user,
-});
-
-  
+    
+      // Получаем payload
+      const payload = await res.json();
+    
+      // Если вернулся не массив — оборачиваем в массив
+      return Array.isArray(payload) ? payload : [payload] as GetConfigResponse;
+    },
+    enabled: !!user,
+  });
   
 
   // Новая мутация для покупки прокси с явными типами
@@ -133,18 +136,6 @@ const { data: configs, isLoading: configsLoading, error: configsError } = useQue
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify(data),
       }).then(res => res.json()),
-  });
-
-  
-
-  // Запросы на получение прокси и истории
-  const { data: proxies, isLoading: proxiesLoading } = useQuery({
-    queryKey: ["/api/my-proxies"],
-    queryFn: getQueryFn({ on401: "throw" }),
-  });
-  const { data: proxyHistory, isLoading: historyLoading } = useQuery({
-    queryKey: ["/api/proxy-history"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
   });
 
   // Формы
@@ -193,6 +184,56 @@ const { data: configs, isLoading: configsLoading, error: configsError } = useQue
   function onPurchaseSubmit(data: ProxyPurchaseValues) {
     createConfigMutation.mutate();
   }
+
+  
+  const getRemainingTime = (expirationDate: string | Date): { time: string, color: string } => {
+    const now = new Date();
+    const exp = new Date(expirationDate);
+    const diffMs = exp.getTime() - now.getTime();
+  
+    if (diffMs <= 0) return { time: "Истек", color: "text-red-500" };
+  
+    const rtf = new Intl.RelativeTimeFormat("ru", { numeric: "always" });
+  
+    const diffMinutes = Math.floor(diffMs / (1000 * 60));
+    const diffHours = Math.floor(diffMinutes / 60);
+    const diffDays = Math.floor(diffHours / 24);
+  
+    let remainingTime = "";
+    let color = "text-green-500"; // Default color (green)
+  
+    if (diffDays > 0) {
+      remainingTime = `${diffDays} дней`;
+  
+      // Цветовые условия
+      if (diffDays <= 3) color = "text-red-500"; // Красный, если осталось 3 дня или меньше
+      else if (diffDays <= 7) color = "text-yellow-500"; // Жёлтый, если осталось 4-7 дней
+    } else if (diffHours > 0) {
+      remainingTime = `${diffHours} часов`;
+  
+      // Цветовые условия
+      if (diffHours <= 3) color = "text-red-500"; // Красный, если осталось 3 часа или меньше
+      else if (diffHours <= 6) color = "text-yellow-500"; // Жёлтый, если осталось 4-6 часов
+    } else {
+      remainingTime = `${diffMinutes} минут`;
+  
+      // Цветовые условия
+      if (diffMinutes <= 15) color = "text-red-500"; // Красный, если осталось 15 минут или меньше
+      else if (diffMinutes <= 30) color = "text-yellow-500"; // Жёлтый, если осталось 15-30 минут
+    }
+  
+    return { time: remainingTime, color };
+  };
+  
+  // разделяем на активные и истёкшие
+  const activeConfigs  = useMemo(
+    () => configs?.filter(c => new Date(c.expiration_date) > new Date()) || [],
+    [configs]
+  );
+  const expiredConfigs = useMemo(
+    () => configs?.filter(c => new Date(c.expiration_date) <= new Date()) || [],
+    [configs]
+  );
 
   return (
     <div className="container mx-auto pt-32 pb-20">
@@ -515,145 +556,173 @@ const { data: configs, isLoading: configsLoading, error: configsError } = useQue
                 </TabsContent>
 
 
-                {/* Вкладка прокси и истории */}
-<TabsContent value="proxies" className="w-full max-w-none">
-  <div className="space-y-8">
-    {/* Заголовок */}
-    <div className="flex items-center gap-4 mb-4">
-      <div className="h-14 w-14 rounded-full bg-green-500/20 flex items-center justify-center">
-        <Globe className="h-8 w-8 text-green-500" />
-      </div>
-      <h3 className="text-xl font-semibold">История прокси</h3>
-    </div>
+                {/* вкладка «Мои прокси» */}
+            <TabsContent value="proxies">
+              <div className="space-y-6">
+                <div className="flex items-center gap-4">
+                  <Globe className="h-8 w-8 text-green-500" />
+                  <h3 className="text-xl font-semibold">История прокси</h3>
+                </div>
 
-    {/* Кнопки-фильтры */}
-    <div className="flex flex-wrap gap-3 mb-4">
-      <Button variant="outline"
-              className={proxyFilter === "all"     ? "bg-green-500/10 border-green-500/30 text-green-500" : ""}
-              onClick={() => setProxyFilter("all")}>Все прокси</Button>
-      <Button variant="outline"
-              className={proxyFilter === "active"  ? "bg-green-500/10 border-green-500/30 text-green-500" : ""}
-              onClick={() => setProxyFilter("active")}>Активные</Button>
-      <Button variant="outline"
-              className={proxyFilter === "expired" ? "bg-red-500/10   border-red-500/30   text-red-500"   : ""}
-              onClick={() => setProxyFilter("expired")}>Истекшие</Button>
-    </div>
-
-    {/* Состояние загрузки / ошибки */}
-    {configsLoading ? (
-      <div className="flex justify-center p-20">
-        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-      </div>
-    ) : configsError ? (
-      <div className="text-red-500">{configsError.message}</div>
-    ) : (
-      (() => {
-        // Проверка на undefined и разделение на два массива
-        if (!configs) {
-          return null;  // Можно вернуть пустой элемент или сообщение, если данных нет
-        }
-      
-        const activeConfigs = configs.filter(c => new Date(c.expiration_date) > new Date());
-        const expiredConfigs = configs.filter(c => new Date(c.expiration_date) <= new Date());
-      
-        // Если нет ни одного в выбранной категории
-        if (
-          (proxyFilter === "active" && activeConfigs.length === 0) ||
-          (proxyFilter === "expired" && expiredConfigs.length === 0) ||
-          (proxyFilter === "all" && configs.length === 0)
-        ) {
-          return <div>Нет доступных данных</div>; // Можно вернуть сообщение, если нет данных
-        }
-
-        return (
-          <div className="space-y-8">
-            {/* Секция активных прокси */}
-            {(proxyFilter === "all" || proxyFilter === "active") && (
-              <section>
-                <h4 className="text-lg font-medium">Активные прокси</h4>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {activeConfigs.map((cfg, idx) => (
-                    <Card key={idx} className="bg-black/40 backdrop-blur-md border border-green-500/30">
-                      <CardHeader className="pb-2">
-                        <div className="flex justify-between items-center">
-                          <CardTitle className="text-base flex items-center">
-                            <Server className="h-4 w-4 mr-2 text-green-500" />
-                            #{idx + 1}
-                          </CardTitle>
-                          <div className="text-xs px-2 py-1 rounded-full border border-green-500/30 text-green-500">
-                            Активен
-                          </div>
-                        </div>
-                      </CardHeader>
-                      <CardContent className="pt-0 space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Ссылка:</span>
-                          <a href={cfg.config_link}
-                             className="text-green-500 hover:underline"
-                             target="_blank">
-                            {cfg.config_link}
-                          </a>
-                        </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">До:</span>
-                          <span>{new Date(cfg.expiration_date).toLocaleDateString()}</span>
-                        </div>
-                      </CardContent>
-                    </Card>
+                {/* фильтры */}
+                <div className="flex gap-2">
+                  {(["all","active","expired"] as const).map(f => (
+                    <Button
+                      key={f}
+                      variant="outline"
+                      className={
+                        proxyFilter === f
+                          ? f === "expired"
+                            ? "bg-red-500/10 text-red-500"
+                            : "bg-green-500/10 text-green-500"
+                          : ""
+                      }
+                      onClick={() => setProxyFilter(f)}
+                    >
+                      {f === "all" ? "Все" : f === "active" ? "Активные" : "Истекшие"}
+                    </Button>
                   ))}
                 </div>
-              </section>
-            )}
 
-            {/* Секция истекших прокси */}
-            {(proxyFilter === "all" || proxyFilter === "expired") && (
-              <section>
-                <h4 className="text-lg font-medium">Истекшие прокси</h4>
-                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                  {expiredConfigs.map((cfg, idx) => (
-                    <Card key={idx} className="bg-black/40 backdrop-blur-md border border-red-500/20">
-                      <CardHeader className="pb-2">
-                        <div className="flex justify-between items-center">
-                          <CardTitle className="text-base flex items-center">
-                            <Server className="h-4 w-4 mr-2 text-red-500" />
-                            #{idx + 1}
-                          </CardTitle>
-                          <div className="text-xs px-2 py-1 rounded-full border border-red-500/30 text-red-500">
-                            Истек
-                          </div>
+                {/* загрузка / ошибка */}
+                {configsLoading ? (
+                  <div className="flex justify-center p-10">
+                    <Loader2 className="h-8 w-8 animate-spin" />
+                  </div>
+                ) : configsError ? (
+                  <div className="text-red-500">{configsError.message}</div>
+                ) : (
+                  // содержимое
+                  <>
+                    {/* пустое состояние */}
+                    {proxyFilter === "all" && configs?.length === 0 && (
+                      <div className="p-6 text-center">
+                        У вас ещё нет прокси.{" "}
+                        <Button onClick={() => setActiveTab("credits")}>
+                          Купить конфигурацию
+                        </Button>
+                      </div>
+                    )}
+
+                    {/* активные */}
+                    {(proxyFilter === "all" || proxyFilter === "active") && activeConfigs.length > 0 && (
+                      <section>
+                        <h4 className="font-medium mb-2">Активные прокси</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                          {activeConfigs.map((cfg, i) => {
+                            const { time, color } = getRemainingTime(cfg.expiration_date);
+                            return (
+                              <Card key={i} className="text-sm">
+                                <CardHeader className="flex justify-between p-2">
+                                <CardTitle className="flex items-center justify-between">
+                                  <div className="flex items-center gap-1">
+                                    <Server className="h-4 w-4 text-green-500" />
+                                    #{i+1}
+                                  </div>
+                                  <span className="text-xs px-2 py-0.5 rounded-lg bg-green-500/10 text-green-500">
+                                    Активен
+                                  </span>
+                                </CardTitle>
+                                </CardHeader>
+                                <CardContent className="space-y-1 px-2 pb-2">
+                                  <div className="flex justify-between items-center">
+                                    <span className="text-gray-400">Ссылка:</span>
+                                    <Popover>
+                                      <PopoverTrigger asChild>
+                                        <Button variant="ghost" size="icon">
+                                          <AiOutlineCopy className="text-green-500" />
+                                        </Button>
+                                      </PopoverTrigger>
+                                      <PopoverContent className="w-[260px] p-2 text-sm">
+                                        <div className="space-y-2">
+                                          <div className="text-muted-foreground">
+                                            Копировать ссылку
+                                          </div>
+                                          <div className="break-all">{cfg.config_link}</div>
+                                          <Button
+                                            size="sm"
+                                            variant="secondary"
+                                            onClick={() =>
+                                              navigator.clipboard.writeText(cfg.config_link)
+                                            }
+                                          >
+                                            Скопировать
+                                          </Button>
+                                        </div>
+                                      </PopoverContent>
+                                    </Popover>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-400">Создан:</span>
+                                    <span>
+                                      {new Date(cfg.created_at).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-400">Истекает:</span>
+                                    <span>
+                                      {new Date(cfg.expiration_date).toLocaleDateString()}
+                                    </span>
+                                  </div>
+                                  <div className="flex justify-between">
+                                    <span className="text-gray-400">Осталось:</span>
+                                    <span className={color}>{time}</span>
+                                  </div>
+                                </CardContent>
+                              </Card>
+                            );
+                          })}
                         </div>
-                      </CardHeader>
-                      <CardContent className="pt-0 space-y-2 text-sm">
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Ссылка:</span>
-                          <a href={cfg.config_link}
-                             className="text-gray-400 hover:underline"
-                             target="_blank">
-                            {cfg.config_link}
-                          </a>
+                      </section>
+                    )}
+
+                    {/* истёкшие */}
+                    {(proxyFilter === "all" || proxyFilter === "expired") && expiredConfigs.length > 0 && (
+                      <section>
+                        <h4 className="font-medium mb-2">Истекшие прокси</h4>
+                        <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
+                          {expiredConfigs.map((cfg, i) => (
+                            <Card key={i} className="text-sm">
+                              <CardHeader className="flex justify-between p-2">
+                                <CardTitle className="flex items-center gap-1">
+                                  <Server className="h-4 w-4 text-red-500" />
+                                  #{i+1}
+                                </CardTitle>
+                                <span className="text-xs px-2 py-0.5 rounded-lg bg-red-500/10 text-red-500">
+                                  Истёк
+                                </span>
+                              </CardHeader>
+                              <CardContent className="space-y-1 px-2 pb-2">
+                                <div className="flex justify-between items-center">
+                                  <span className="text-gray-400">Ссылка:</span>
+                                  <a
+                                    href={cfg.config_link}
+                                    target="_blank"
+                                    className="text-gray-400 hover:underline break-all max-w-[150px]"
+                                  >
+                                    {cfg.config_link}
+                                  </a>
+                                </div>
+                                <div className="flex justify-between">
+                                  <span className="text-gray-400">Истёк:</span>
+                                  <span>
+                                    {new Date(cfg.expiration_date).toLocaleDateString()}
+                                  </span>
+                                </div>
+                              </CardContent>
+                            </Card>
+                          ))}
                         </div>
-                        <div className="flex justify-between">
-                          <span className="text-gray-400">Истек:</span>
-                          <span>{new Date(cfg.expiration_date).toLocaleDateString()}</span>
-                        </div>
-                      </CardContent>
-                    </Card>
-                  ))}
-                </div>
-              </section>
-            )}
-          </div>
-        );
-      })()
-    )}
+                      </section>
+                    )}
+                  </>
+                )}
+              </div>
+            </TabsContent>
+            </Tabs>
+          </CardContent>
+        </Card>
+      </motion.div>
+    </div>
   </div>
-</TabsContent>
-
-              </Tabs>
-            </CardContent>
-          </Card>
-        </motion.div>
-      </div>
-    </div>
-  );
-}
+)};
