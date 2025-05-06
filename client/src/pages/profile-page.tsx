@@ -46,13 +46,19 @@ import {
 import { motion } from "framer-motion";
 
 export async function apiRequest(method: string, url: string, options?: RequestInit) {
+  const token = localStorage.getItem('access_token');  // Получаем токен из localStorage
+
   const config: RequestInit = {
     method,
     ...options,
+    headers: {
+      "Authorization": `Bearer ${token}`,  // Добавляем токен в заголовок
+      ...options?.headers,  // сохраняем другие заголовки, если они есть
+    },
   };
 
   if (method === "GET" || method === "HEAD") {
-    delete config.body; // Убедиться, что body не попадает в GET
+    delete config.body; // Убедимся, что body не попадает в GET
   }
 
   return fetch(url, config);
@@ -99,31 +105,32 @@ export default function ProfilePage() {
     queryKey: ["configurations", user?.id],
     queryFn: async () => {
       if (!user) throw new Error("Неавторизован");
-    
+  
+      const token = localStorage.getItem('access_token'); // Получаем токен из localStorage
+  
       const res = await fetch(
         `http://localhost:4000/api/users/${user.id}/configurations`,
         {
           method: "GET",
           credentials: "include",
-          headers: { "Content-Type": "application/json" },
+          headers: {
+            "Content-Type": "application/json",
+            "Authorization": `Bearer ${token}`,  // Добавляем токен в заголовок
+          },
         }
       );
-    
+  
       if (!res.ok) {
         const t = await res.text();
         console.error("API error:", t);
         throw new Error(`Ошибка ${res.status}`);
       }
-    
-      // Получаем payload
+  
       const payload = await res.json();
-    
-      // Если вернулся не массив — оборачиваем в массив
       return Array.isArray(payload) ? payload : [payload] as GetConfigResponse;
     },
     enabled: !!user,
   });
-  
 
   // Новая мутация для покупки прокси с явными типами
   const purchaseProxyMutation = useMutation<
@@ -131,13 +138,20 @@ export default function ProfilePage() {
     Error,
     PurchaseVars
   >({
-    mutationFn: (data: PurchaseVars) =>
-      fetch("/api/purchase-proxy", {
+    mutationFn: (data: PurchaseVars) => {
+      const token = localStorage.getItem('access_token'); // Получаем токен из localStorage
+    
+      return fetch("/api/purchase-proxy", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
+        headers: {
+          "Content-Type": "application/json",
+          "Authorization": `Bearer ${token}`,  // Добавляем токен в заголовок
+        },
         body: JSON.stringify(data),
-      }).then(res => res.json()),
+      }).then(res => res.json());
+    },
   });
+
 
   // Формы
   const profileForm = useForm<ProfileValues>({
@@ -173,6 +187,9 @@ export default function ProfilePage() {
   function onProfileSubmit(data: ProfileValues) {
     if (!user?.id) return;
     const { currentPassword, newPassword, ...profileData } = data;
+  
+    const token = localStorage.getItem('access_token'); // Получаем токен из localStorage
+  
     updateProfileMutation.mutate({
       id: user.id,
       ...profileData,
@@ -181,51 +198,12 @@ export default function ProfilePage() {
         : {}),
     });
   }
+  
 
   function onPurchaseSubmit(data: ProxyPurchaseValues) {
     createConfigMutation.mutate();
   }
 
-  
-  // const getRemainingTime = (expirationDate: string | Date): { time: string, color: string } => {
-  //   const now = new Date();
-  //   const exp = new Date(expirationDate);
-  //   const diffMs = exp.getTime() - now.getTime();
-  
-  //   if (diffMs <= 0) return { time: "Истек", color: "text-red-500" };
-  
-  //   const rtf = new Intl.RelativeTimeFormat("ru", { numeric: "always" });
-  
-  //   const diffMinutes = Math.floor(diffMs / (1000 * 60));
-  //   const diffHours = Math.floor(diffMinutes / 60);
-  //   const diffDays = Math.floor(diffHours / 24);
-  
-  //   let remainingTime = "";
-  //   let color = "text-green-500"; // Default color (green)
-  
-  //   if (diffDays > 0) {
-  //     remainingTime = `${diffDays} дней`;
-  
-  //     // Цветовые условия
-  //     if (diffDays <= 3) color = "text-red-500"; // Красный, если осталось 3 дня или меньше
-  //     else if (diffDays <= 7) color = "text-yellow-500"; // Жёлтый, если осталось 4-7 дней
-  //   } else if (diffHours > 0) {
-  //     remainingTime = `${diffHours} часов`;
-  
-  //     // Цветовые условия
-  //     if (diffHours <= 3) color = "text-red-500"; // Красный, если осталось 3 часа или меньше
-  //     else if (diffHours <= 6) color = "text-yellow-500"; // Жёлтый, если осталось 4-6 часов
-  //   } else {
-  //     remainingTime = `${diffMinutes} минут`;
-  
-  //     // Цветовые условия
-  //     if (diffMinutes <= 15) color = "text-red-500"; // Красный, если осталось 15 минут или меньше
-  //     else if (diffMinutes <= 30) color = "text-yellow-500"; // Жёлтый, если осталось 15-30 минут
-  //   }
-  
-  //   return { time: remainingTime, color };
-  // };
-  
   // разделяем на активные и истёкшие
   const activeConfigs  = useMemo(
     () => configs?.filter(c => new Date(c.expiration_date) > new Date()) || [],

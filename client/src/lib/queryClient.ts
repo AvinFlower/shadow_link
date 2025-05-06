@@ -7,18 +7,16 @@ async function throwIfResNotOk(res: Response) {
   }
 }
 
-export async function apiRequest(
-  method: string,
-  url: string,
-  data?: unknown | undefined,
-): Promise<Response> {
+export async function apiRequest<T>(method: string, url: string, data?: T) {
+  const token = localStorage.getItem("access_token");
   const res = await fetch(url, {
     method,
-    headers: data ? { "Content-Type": "application/json" } : {},
+    headers: {
+      ...(data ? { "Content-Type": "application/json" } : {}),
+      ...(token ? { "Authorization": `Bearer ${token}` } : {}),
+    },
     body: data ? JSON.stringify(data) : undefined,
-    credentials: "include",
   });
-
   await throwIfResNotOk(res);
   return res;
 }
@@ -45,13 +43,13 @@ export const queryClient = new QueryClient({
   defaultOptions: {
     queries: {
       queryFn: getQueryFn({ on401: "throw" }),
-      refetchInterval: false,
+      refetchInterval: 60000, // Например, обновление данных каждую минуту
       refetchOnWindowFocus: false,
-      staleTime: Infinity,
+      staleTime: 300000, // Данные считаются актуальными в течение 5 минут
       retry: false,
     },
     mutations: {
-      retry: false,
+      retry: false, // Если нужно, можно добавить retry для мутаций
     },
   },
 });

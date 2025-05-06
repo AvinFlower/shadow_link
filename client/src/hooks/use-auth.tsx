@@ -40,7 +40,6 @@ type AuthContextType = {
   registerMutation: UseMutationResult<SelectUser, Error, InsertUser>;
   updateProfileMutation: UseMutationResult<SelectUser, Error, UpdateProfileData>;
   createConfigMutation: UseMutationResult<CreateConfigResponse, Error, void>;
-  // getConfigMutation: UseMutationResult<GetConfigResponse, Error, void>;
 };
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -50,13 +49,34 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [location, navigate] = useLocation();  // Правильная деструктуризация
   
   const {
-    data: user,
-    error,
-    isLoading,
+      data: user,
+      error,
+      isLoading,
   } = useQuery<SelectUser | null, Error>({
-    queryKey: ["/api/user"],
-    queryFn: getQueryFn({ on401: "returnNull" }),
+      queryKey: ["/api/profile"],
+      queryFn: async () => {
+          try {
+              // напрямую через apiRequest, чтобы сразу авторизационный заголовок повесить
+              const res = await apiRequest("GET", "http://localhost:4000/api/profile");
+          
+              if (!res.ok) {
+                  if (res.status === 401) {
+                      return null;  // если ошибка 401, возвращаем null
+                  }
+                  throw new Error("Ошибка при получении профиля");
+              }
+            
+              return (await res.json()) as SelectUser;
+          } catch (err) {
+              // Обрабатываем ошибку в queryFn
+              if (err instanceof Error) {
+                  console.error("Ошибка при запросе профиля:", err.message);
+              }
+              throw err;  // Прокидываем ошибку дальше, чтобы она была обработана в error
+          }
+      },
   });
+
 
   async function checkCurrentPassword(password: string): Promise<boolean> {
     const res = await apiRequest("POST", "/api/check-password", { password });
@@ -64,43 +84,74 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return isPasswordCorrect;
   }
 
-  const loginMutation = useMutation({
-    mutationFn: async (credentials: LoginData) => {
-      const res = await apiRequest("POST", "http://localhost:4000/api/login", credentials);
-      return await res.json();
+  const loginMutation = useMutation<SelectUser, Error, LoginData>({
+    mutationFn: async (credentials) => {
+      // Выводим, что отправляем
+      console.log("Login payload:", credentials);
+  
+      // Передаём только данные, apiRequest сам добавит Content-Type и credentials
+      const res = await apiRequest(
+        "POST",
+        "http://localhost:4000/api/login",
+        credentials
+      );
+  
+      // Раз JSON уже проверен на ok, просто парсим
+      const data = await res.json();
+  
+      // Сохраняем JWT
+      localStorage.setItem("access_token", data.access_token);
+      return data.user as SelectUser;
     },
-    onSuccess: (user: SelectUser) => {
+    onSuccess: (user) => {
+      // Обновляем кэш и редиректим
       queryClient.setQueryData(["/api/user"], user);
       toast({
         title: "Вход выполнен успешно",
         description: `Добро пожаловать, ${user.username}!`,
         variant: "default",
       });
+      navigate("/profile");  // ← здесь переход в профиль
     },
     onError: (error: Error) => {
       toast({
         title: "Ошибка входа",
-        description: error.message || "Неверное имя пользователя или пароль",
+        description: error.message,
         variant: "destructive",
       });
     },
   });
+  
+  
 
   const registerMutation = useMutation({
     mutationFn: async (credentials: InsertUser) => {
-      const birthDateParts = credentials.birth_date.split('-');
-      const formattedDate = `${birthDateParts[2]}.${birthDateParts[1]}.${birthDateParts[0]}`;
-  
-      // Обновляем дату в credentials
-      credentials.birth_date = formattedDate;
-  
-      const res = await apiRequest("POST", "http://localhost:4000/api/register", credentials);
-      if (!res.ok) {
-        const errorResponse = await res.json();
-        throw new Error(errorResponse.message || "Ошибка на сервере");
+      // Проверка обязательных полей
+      if (!credentials.username || !credentials.email || !credentials.password || !credentials.birth_date) {
+        throw new Error("Все поля обязательны для заполнения");
       }
   
-      return await res.json();
+      // Форматирование даты (YYYY-MM-DD → DD.MM.YYYY)
+      if (credentials.birth_date.includes('-')) {
+        const [year, month, day] = credentials.birth_date.split('-');
+        credentials.birth_date = `${day}.${month}.${year}`;
+      }
+  
+      console.log("Отправляемые данные:", credentials);
+  
+      // Правильный вызов apiRequest
+      const res = await apiRequest(
+        "POST",
+        "http://localhost:4000/api/register",
+        credentials
+      );
+  
+      // Теперь res.ok уже гарантирован, получаем JSON
+      const data = await res.json();
+  
+      // Сохраняем токен и возвращаем пользователя
+      localStorage.setItem("access_token", data.access_token);
+      return data.user as SelectUser;
     },
     onSuccess: (user) => {
       queryClient.setQueryData(["/api/user"], user);
@@ -150,89 +201,67 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   });
   
   
-  const updateProfileMutation = useMutation<SelectUser, Error, UpdateProfileData, { changes: string[] }>({
-    mutationFn: async (profileData) => {
-      const { id, currentPassword, newPassword, ...rest } = profileData;
-    
-      // Если меняем пароль
-      if (currentPassword && newPassword) {
-        const res = await fetch("http://localhost:4000/api/change-password", {
-          method: "POST",
-          credentials: "include",               // <-- обязательно
-          headers: {
-            "Content-Type": "application/json",
-          },
-          body: JSON.stringify({
-            old_password: currentPassword,
-            new_password: newPassword,
-          }),
-        });
-        if (!res.ok) {
-          const err = await res.json();
-          throw new Error(err.message);
+  const updateProfileMutation = useMutation<SelectUser, Error, UpdateProfileData, { previousUser?: SelectUser; changes: string[] }>(
+    {
+      mutationFn: async ({ id, currentPassword, newPassword, ...rest }) => {
+        // Если меняем пароль
+        if (currentPassword && newPassword) {
+          // Отправляем только необходимые поля
+          const res = await apiRequest(
+            "POST",
+            "http://localhost:4000/api/change-password",
+            { old_password: currentPassword, new_password: newPassword }
+          );
+          return res.json();
         }
+    
+        // Иначе обновляем профиль (username, email, full_name и т.п.)
+        const res = await apiRequest(
+          "PUT",
+          `http://localhost:4000/api/users/${id}`,
+          rest  // <-- здесь передаём только { username?, email?, full_name?, birth_date? }
+        );
         return res.json();
-      }
-    
-      // Иначе просто обновляем профиль
-      const res = await fetch(`http://localhost:4000/api/users/${id}`, {
-        method: "PUT",
-        credentials: "include",               // <-- и здесь
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(rest),
-      });
-      if (!res.ok) {
-        const err = await res.json();
-        throw new Error(err.message);
-      }
-      return res.json();
-    },
-    onMutate: async (profileData) => {
-      // 1) отменяем все запросы к /api/user, чтобы не было гонки
-      await queryClient.cancelQueries({ queryKey: ["/api/user"] });
-  
-      // 2) достаём старые данные
-      const previousUser = queryClient.getQueryData<SelectUser>(["/api/user"]);
-  
-      // 3) считаем, что именно поменялось
-      const changes: string[] = [];
-      if (previousUser) {
-        if (profileData.username && profileData.username !== previousUser.username) {
-          changes.push("имя пользователя");
+      },
+      onMutate: async (profileData) => {
+        await queryClient.cancelQueries({ queryKey: ["/api/user"] });
+        const previousUser = queryClient.getQueryData<SelectUser>(["/api/user"]);
+        const changes: string[] = [];
+        if (previousUser) {
+          if (profileData.username && profileData.username !== previousUser.username) {
+            changes.push("имя пользователя");
+          }
+          if (profileData.email && profileData.email !== previousUser.email) {
+            changes.push("email");
+          }
+          if (profileData.currentPassword && profileData.newPassword) {
+            changes.push("пароль");
+          }
         }
-        if (profileData.email && profileData.email !== previousUser.email) {
-          changes.push("email");
+        return { previousUser, changes };
+      },
+      onSuccess: (user, _vars, context) => {
+        queryClient.setQueryData(["/api/user"], user);
+        if (context.changes.length) {
+          toast({
+            title: "Изменения применены",
+            description: `Изменено: ${context.changes.join(", ")}`,
+            variant: "default",
+          });
         }
-        if (profileData.currentPassword && profileData.newPassword) {
-          changes.push("пароль");
+      },
+      onError: (error, _vars, context) => {
+        // можно вернуть старые данные, если нужно
+        if (context?.previousUser) {
+          queryClient.setQueryData(["/api/user"], context.previousUser);
         }
-      }
-  
-      return { previousUser, changes };
-    },
-    onSuccess: (user, _variables, context) => {
-      // обновляем кэш
-      queryClient.setQueryData(["/api/user"], user);
-      
-      // выводим тост только если есть изменения
-      if (context.changes.length > 0) {
         toast({
-          title: "Изменения применены",
-          description: `Изменено: ${context.changes.join(", ")}`,
-          variant: "default",
+          title: "Ошибка обновления",
+          description: error.message,
+          variant: "destructive",
         });
-      }
-    },
-    onError: (error) => {
-      toast({
-        title: "Ошибка обновления",
-        description: error.message,
-        variant: "destructive",
-      });
-    },
-  });
+      },
+    });
   
   const createConfigMutation = useMutation<CreateConfigResponse>({
     mutationFn: async () => {
@@ -267,43 +296,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
   });
-
-  // const getConfigMutation = useMutation<GetConfigResponse>({
-  //   mutationFn: async () => {
-  //     if (!user) throw new Error("Пользователь не найден");
-  
-  //     const res = await apiRequest(
-  //       "GET", 
-  //       `http://localhost:4000/api/users/${user.id}/configurations`, // Параметры в URL
-  //       { credentials: "include" } // Параметры запроса, если нужно
-  //     );
-      
-  //     const data = await res.json();
-  //     if (!res.ok) throw new Error(data.message || "Ошибка получения конфигураций");
-  //     return data as GetConfigResponse; // Теперь используем правильный тип для массива конфигураций
-  //   },
-  //   onSuccess: (data) => {
-  //     toast({
-  //       title: "Конфигурации получены",
-  //       description: `Получено ${data.length} конфигураций.`,
-  //       variant: "default",
-  //     });
-  
-  //     // Обновляем кэш, если нужно, для другой части данных
-  //     queryClient.invalidateQueries({ queryKey: ["configurations", user!.id] });
-  
-  //     // Если нужно — переключаем вкладку или выполняем другие действия
-  //     navigate("/profile?tab=configurations");
-  //   },
-  //   onError: (error: Error) => {
-  //     toast({
-  //       title: "Ошибка получения",
-  //       description: error.message,
-  //       variant: "destructive",
-  //     });
-  //   },
-  // });
-  
   
   return (
     <AuthContext.Provider
@@ -316,7 +308,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         registerMutation,
         updateProfileMutation,
         createConfigMutation,
-        // getConfigMutation
       }}
     >
       {children}
