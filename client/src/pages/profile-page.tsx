@@ -573,15 +573,25 @@ export default function ProfilePage() {
                 ) : (
                   // содержимое
                   <>
-                    {/* пустое состояние */}
-                    {proxyFilter === "all" && configs?.length === 0 && (
-                      <div className="p-6 text-center">
-                        У вас ещё нет прокси.{" "}
-                        <Button onClick={() => setActiveTab("credits")}>
+                    {/* Пустое состояние */}
+                    {(proxyFilter === "all" || proxyFilter === "active" || proxyFilter === "expired") && configs?.length === 0 && (
+                      <div className="p-6 text-center bg-black rounded-lg">
+                        <h2 className="text-xl font-semibold text-white mb-4">
+                          У вас ещё нет прокси.
+                        </h2>
+                        <p className="text-muted-foreground mb-6">
+                          Для получения конфигурации вам нужно сначала купить прокси.
+                        </p>
+                        <Button
+                          onClick={() => setActiveTab("credits")}
+                          className="px-6 py-2 bg-primary hover:bg-primary/90 text-black rounded-md transition duration-300"
+                        >
                           Купить конфигурацию
                         </Button>
                       </div>
                     )}
+
+
 
                     {/* активные */}
                     {(proxyFilter === "all" || proxyFilter === "active") && activeConfigs.length > 0 && (
