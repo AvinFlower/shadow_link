@@ -9,6 +9,7 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { AiOutlineCopy } from 'react-icons/ai';
+import { ProxyCard } from "@/components/ProxyCard"; // Путь к файлу, где определен ProxyCard
 
 import { GetConfigResponse } from "@/hooks/use-auth"; // Путь к файлу с типами, где определён GetConfigResponse
 import {
@@ -186,44 +187,44 @@ export default function ProfilePage() {
   }
 
   
-  const getRemainingTime = (expirationDate: string | Date): { time: string, color: string } => {
-    const now = new Date();
-    const exp = new Date(expirationDate);
-    const diffMs = exp.getTime() - now.getTime();
+  // const getRemainingTime = (expirationDate: string | Date): { time: string, color: string } => {
+  //   const now = new Date();
+  //   const exp = new Date(expirationDate);
+  //   const diffMs = exp.getTime() - now.getTime();
   
-    if (diffMs <= 0) return { time: "Истек", color: "text-red-500" };
+  //   if (diffMs <= 0) return { time: "Истек", color: "text-red-500" };
   
-    const rtf = new Intl.RelativeTimeFormat("ru", { numeric: "always" });
+  //   const rtf = new Intl.RelativeTimeFormat("ru", { numeric: "always" });
   
-    const diffMinutes = Math.floor(diffMs / (1000 * 60));
-    const diffHours = Math.floor(diffMinutes / 60);
-    const diffDays = Math.floor(diffHours / 24);
+  //   const diffMinutes = Math.floor(diffMs / (1000 * 60));
+  //   const diffHours = Math.floor(diffMinutes / 60);
+  //   const diffDays = Math.floor(diffHours / 24);
   
-    let remainingTime = "";
-    let color = "text-green-500"; // Default color (green)
+  //   let remainingTime = "";
+  //   let color = "text-green-500"; // Default color (green)
   
-    if (diffDays > 0) {
-      remainingTime = `${diffDays} дней`;
+  //   if (diffDays > 0) {
+  //     remainingTime = `${diffDays} дней`;
   
-      // Цветовые условия
-      if (diffDays <= 3) color = "text-red-500"; // Красный, если осталось 3 дня или меньше
-      else if (diffDays <= 7) color = "text-yellow-500"; // Жёлтый, если осталось 4-7 дней
-    } else if (diffHours > 0) {
-      remainingTime = `${diffHours} часов`;
+  //     // Цветовые условия
+  //     if (diffDays <= 3) color = "text-red-500"; // Красный, если осталось 3 дня или меньше
+  //     else if (diffDays <= 7) color = "text-yellow-500"; // Жёлтый, если осталось 4-7 дней
+  //   } else if (diffHours > 0) {
+  //     remainingTime = `${diffHours} часов`;
   
-      // Цветовые условия
-      if (diffHours <= 3) color = "text-red-500"; // Красный, если осталось 3 часа или меньше
-      else if (diffHours <= 6) color = "text-yellow-500"; // Жёлтый, если осталось 4-6 часов
-    } else {
-      remainingTime = `${diffMinutes} минут`;
+  //     // Цветовые условия
+  //     if (diffHours <= 3) color = "text-red-500"; // Красный, если осталось 3 часа или меньше
+  //     else if (diffHours <= 6) color = "text-yellow-500"; // Жёлтый, если осталось 4-6 часов
+  //   } else {
+  //     remainingTime = `${diffMinutes} минут`;
   
-      // Цветовые условия
-      if (diffMinutes <= 15) color = "text-red-500"; // Красный, если осталось 15 минут или меньше
-      else if (diffMinutes <= 30) color = "text-yellow-500"; // Жёлтый, если осталось 15-30 минут
-    }
+  //     // Цветовые условия
+  //     if (diffMinutes <= 15) color = "text-red-500"; // Красный, если осталось 15 минут или меньше
+  //     else if (diffMinutes <= 30) color = "text-yellow-500"; // Жёлтый, если осталось 15-30 минут
+  //   }
   
-    return { time: remainingTime, color };
-  };
+  //   return { time: remainingTime, color };
+  // };
   
   // разделяем на активные и истёкшие
   const activeConfigs  = useMemo(
@@ -378,7 +379,7 @@ export default function ProfilePage() {
 
                         {user?.role === "admin" && (
                           <Button
-                            onClick={() => window.open("https://vk.com", "_blank")}
+                            onClick={() => window.open("http://192.145.28.171:18519/Dx92f01YjGdrfH7", "_blank")}
                           >
                             Перейти в панель администрирования
                           </Button>
@@ -609,108 +610,34 @@ export default function ProfilePage() {
                       <section>
                         <h4 className="font-medium mb-2">Активные прокси</h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
-                          {activeConfigs.map((cfg, i) => {
-                            const { time, color } = getRemainingTime(cfg.expiration_date);
-                            return (
-                              <Card key={i} className="text-sm">
-                                <CardHeader className="flex justify-between p-2">
-                                <CardTitle className="flex items-center justify-between">
-                                  <div className="flex items-center gap-1">
-                                    <Server className="h-4 w-4 text-green-500" />
-                                    #{i+1}
-                                  </div>
-                                  <span className="text-xs px-2 py-0.5 rounded-lg bg-green-500/10 text-green-500">
-                                    Активен
-                                  </span>
-                                </CardTitle>
-                                </CardHeader>
-                                <CardContent className="space-y-1 px-2 pb-2">
-                                  <div className="flex justify-between items-center">
-                                    <span className="text-gray-400">Ссылка:</span>
-                                    <Popover>
-                                      <PopoverTrigger asChild>
-                                        <Button variant="ghost" size="icon">
-                                          <AiOutlineCopy className="text-green-500" />
-                                        </Button>
-                                      </PopoverTrigger>
-                                      <PopoverContent className="w-[260px] p-2 text-sm">
-                                        <div className="space-y-2">
-                                          <div className="text-muted-foreground">
-                                            Копировать ссылку
-                                          </div>
-                                          <div className="break-all">{cfg.config_link}</div>
-                                          <Button
-                                            size="sm"
-                                            variant="secondary"
-                                            onClick={() =>
-                                              navigator.clipboard.writeText(cfg.config_link)
-                                            }
-                                          >
-                                            Скопировать
-                                          </Button>
-                                        </div>
-                                      </PopoverContent>
-                                    </Popover>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-gray-400">Создан:</span>
-                                    <span>
-                                      {new Date(cfg.created_at).toLocaleDateString()}
-                                    </span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-gray-400">Истекает:</span>
-                                    <span>
-                                      {new Date(cfg.expiration_date).toLocaleDateString()}
-                                    </span>
-                                  </div>
-                                  <div className="flex justify-between">
-                                    <span className="text-gray-400">Осталось:</span>
-                                    <span className={color}>{time}</span>
-                                  </div>
-                                </CardContent>
-                              </Card>
-                            );
-                          })}
+                          {activeConfigs.map((cfg, i) => (
+                            <ProxyCard
+                              key={i}
+                              cfg={cfg}
+                              i={i}
+                              status="active"
+                              colorClass="green-500"
+                              statusText="Активен"
+                            />
+                          ))}
                         </div>
                       </section>
                     )}
-
-                    {/* истёкшие */}
+                    
+                    {/* истекшие */}
                     {(proxyFilter === "all" || proxyFilter === "expired") && expiredConfigs.length > 0 && (
                       <section>
                         <h4 className="font-medium mb-2">Истекшие прокси</h4>
                         <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-5 gap-4">
                           {expiredConfigs.map((cfg, i) => (
-                            <Card key={i} className="text-sm">
-                              <CardHeader className="flex justify-between p-2">
-                                <CardTitle className="flex items-center gap-1">
-                                  <Server className="h-4 w-4 text-red-500" />
-                                  #{i+1}
-                                </CardTitle>
-                                <span className="text-xs px-2 py-0.5 rounded-lg bg-red-500/10 text-red-500">
-                                  Истёк
-                                </span>
-                              </CardHeader>
-                              <CardContent className="space-y-1 px-2 pb-2">
-                                <div className="flex justify-between items-center">
-                                  <span className="text-gray-400">Ссылка:</span>
-                                  <a
-                                    href={cfg.config_link}
-                                    target="_blank"
-                                    className="text-gray-400 hover:underline break-all max-w-[150px]"
-                                  >
-                                    {cfg.config_link}
-                                  </a>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-400">Истёк:</span>
-                                  <span>
-                                    {new Date(cfg.expiration_date).toLocaleDateString()}
-                                  </span>
-                                </div>
-                              </CardContent>
-                            </Card>
+                            <ProxyCard
+                              key={i}
+                              cfg={cfg}
+                              i={i}
+                              status="expired"
+                              colorClass="red-500"
+                              statusText="Истёк"
+                            />
                           ))}
                         </div>
                       </section>
