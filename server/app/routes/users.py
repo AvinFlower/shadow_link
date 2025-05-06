@@ -119,14 +119,13 @@ def create_configuration(user_id):
     
 
 @users_bp.route('/users/<int:user_id>/configurations', methods=['GET'])
-@login_required
 def get_latest_configuration(user_id):
     # Проверяем, что пользователь существует и совпадает с текущим
     user = User.query.get(user_id)
     if not user:
         return jsonify({"error": "User not found"}), 404
-    if user.id != current_user.id:
-        return jsonify({"error": "Unauthorized"}), 403
+    # if user.id != current_user.id:
+    #     return jsonify({"error": "Unauthorized"}), 403
 
     # Получаем последнюю конфигурацию по дате создания
     config = UserConfiguration.query \

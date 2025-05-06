@@ -7,7 +7,8 @@ import { Link } from 'wouter';
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
-import { apiRequest } from "@/lib/queryClient";
+
+import { GetConfigResponse } from "@/hooks/use-auth"; // Путь к файлу с типами, где определён GetConfigResponse
 import {
   Form,
   FormControl,
@@ -40,6 +41,19 @@ import {
   Server,
 } from "lucide-react";
 import { motion } from "framer-motion";
+
+export async function apiRequest(method: string, url: string, options?: RequestInit) {
+  const config: RequestInit = {
+    method,
+    ...options,
+  };
+
+  if (method === "GET" || method === "HEAD") {
+    delete config.body; // Убедиться, что body не попадает в GET
+  }
+
+  return fetch(url, config);
+}
 
 // Schemas
 const profileSchema = z.object({
@@ -75,31 +89,36 @@ export default function ProfilePage() {
 
 
   // 1) Запрос всех конфигураций
-  const {
-    data: configs,
-    isLoading: configsLoading,
-    error: configsError,
-  } = useQuery<{
-    config_link: string;
-    expiration_date: string;
-    created_at: string;
-  }[]>(
-    {
-      queryKey: ["configurations", user?.id],
-      queryFn: async () => {
-        if (!user) throw new Error("Неавторизован");
-        const res = await apiRequest(
-          "GET",
-          `/api/users/${user.id}/configurations`,
-          { credentials: "include" }
-        );
-        const payload = await res.json();
-        if (!res.ok) throw new Error(payload.message || "Не удалось загрузить");
-        return payload;
-      },
-      enabled: !!user,
+const { data: configs, isLoading: configsLoading, error: configsError } = useQuery<GetConfigResponse>({
+  queryKey: ["configurations", user?.id],
+  queryFn: async () => {
+    if (!user) throw new Error("Неавторизован");
+
+    const res = await fetch(
+      `http://localhost:4000/api/users/${user.id}/configurations`,
+      {
+        method: "GET",
+        credentials: "include",
+        headers: { "Content-Type": "application/json" },
+      }
+    );
+
+    if (!res.ok) {
+      const t = await res.text();
+      console.error("API error:", t);
+      throw new Error(`Ошибка ${res.status}`);
     }
-  );
+
+    // Получаем payload
+    const payload = await res.json();
+
+    // Если вернулся не массив — оборачиваем в массив
+    return Array.isArray(payload) ? payload : [payload] as GetConfigResponse;
+  },
+  enabled: !!user,
+});
+
+  
   
 
   // Новая мутация для покупки прокси с явными типами
@@ -497,110 +516,138 @@ export default function ProfilePage() {
 
 
                 {/* Вкладка прокси и истории */}
-                <TabsContent value="proxies" className="w-full max-w-none">
-                  <div className="space-y-8">
-                    <div className="flex items-center gap-4 mb-4">
-                      <div className="h-14 w-14 rounded-full bg-green-500/20 flex items-center justify-center">
-                        <Globe className="h-8 w-8 text-green-500" />
-                      </div>
-                      <h3 className="text-xl font-semibold">История прокси</h3>
-                    </div>
+<TabsContent value="proxies" className="w-full max-w-none">
+  <div className="space-y-8">
+    {/* Заголовок */}
+    <div className="flex items-center gap-4 mb-4">
+      <div className="h-14 w-14 rounded-full bg-green-500/20 flex items-center justify-center">
+        <Globe className="h-8 w-8 text-green-500" />
+      </div>
+      <h3 className="text-xl font-semibold">История прокси</h3>
+    </div>
 
-                    {/* Фильтры и категории */}
-                    <div className="flex flex-wrap gap-3 mb-4">
-                      <Button
-                        variant="outline"
-                        className={proxyFilter === "all" ? "bg-green-500/10 border-green-500/30 text-green-500" : ""}
-                        onClick={() => setProxyFilter("all")}
-                      >
-                        Все прокси
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className={proxyFilter === "active" ? "bg-green-500/10 border-green-500/30 text-green-500" : ""}
-                        onClick={() => setProxyFilter("active")}
-                      >
-                        Активные
-                      </Button>
-                      <Button
-                        variant="outline"
-                        className={proxyFilter === "expired" ? "bg-red-500/10 border-red-500/30 text-red-500" : ""}
-                        onClick={() => setProxyFilter("expired")}
-                      >
-                        Истекшие
-                      </Button>
-                    </div>
+    {/* Кнопки-фильтры */}
+    <div className="flex flex-wrap gap-3 mb-4">
+      <Button variant="outline"
+              className={proxyFilter === "all"     ? "bg-green-500/10 border-green-500/30 text-green-500" : ""}
+              onClick={() => setProxyFilter("all")}>Все прокси</Button>
+      <Button variant="outline"
+              className={proxyFilter === "active"  ? "bg-green-500/10 border-green-500/30 text-green-500" : ""}
+              onClick={() => setProxyFilter("active")}>Активные</Button>
+      <Button variant="outline"
+              className={proxyFilter === "expired" ? "bg-red-500/10   border-red-500/30   text-red-500"   : ""}
+              onClick={() => setProxyFilter("expired")}>Истекшие</Button>
+    </div>
 
-                    {configsLoading ? (
-                      <div className="flex justify-center p-20">
-                        <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                      </div>
-                    ) : configsError ? (
-                      <div className="text-red-500">{configsError.message}</div>
-                    ) : configs && configs.length > 0 ? (
-                      <div className="space-y-4">
-                        {/** фильтрация по proxyFilter */}
-                        {["all","active","expired"].map((f) => {
-                          const filtered = configs.filter(cfg => {
-                            const isActive = new Date(cfg.expiration_date) > new Date();
-                            if (f === "active") return isActive;
-                            if (f === "expired") return !isActive;
-                            return true;
-                          });
-                          if (filtered.length === 0 || (proxyFilter !== "all" && proxyFilter !== f)) return null;
-                          return (
-                            <div key={f}>
-                              <h4 className="text-lg font-medium">
-                                {f === "all" ? "Все прокси" : f === "active" ? "Активные прокси" : "Истекшие прокси"}
-                              </h4>
-                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                                {filtered.map((cfg, idx) => (
-                                  <Card key={idx} className={`bg-black/40 backdrop-blur-md border ${f === "active" ? "border-green-500/30" : "border-red-500/20"}`}>
-                                    <CardHeader className="pb-2">
-                                      <div className="flex justify-between items-center">
-                                        <CardTitle className="text-base flex items-center">
-                                          <Server className={`h-4 w-4 mr-2 ${f === "active" ? "text-green-500" : "text-red-500"}`} />
-                                          #{idx + 1}
-                                        </CardTitle>
-                                        <div
-                                          className={`text-xs px-2 py-1 rounded-full border ${
-                                            f === "active"
-                                              ? "border-green-500/30 text-green-500"
-                                              : "border-red-500/30 text-red-500"
-                                          }`}
-                                        >
-                                          {f === "active" ? "Активен" : "Истек"}
-                                        </div>
+    {/* Состояние загрузки / ошибки */}
+    {configsLoading ? (
+      <div className="flex justify-center p-20">
+        <Loader2 className="h-8 w-8 animate-spin text-primary" />
+      </div>
+    ) : configsError ? (
+      <div className="text-red-500">{configsError.message}</div>
+    ) : (
+      (() => {
+        // Проверка на undefined и разделение на два массива
+        if (!configs) {
+          return null;  // Можно вернуть пустой элемент или сообщение, если данных нет
+        }
+      
+        const activeConfigs = configs.filter(c => new Date(c.expiration_date) > new Date());
+        const expiredConfigs = configs.filter(c => new Date(c.expiration_date) <= new Date());
+      
+        // Если нет ни одного в выбранной категории
+        if (
+          (proxyFilter === "active" && activeConfigs.length === 0) ||
+          (proxyFilter === "expired" && expiredConfigs.length === 0) ||
+          (proxyFilter === "all" && configs.length === 0)
+        ) {
+          return <div>Нет доступных данных</div>; // Можно вернуть сообщение, если нет данных
+        }
 
-                                      </div>
-                                    </CardHeader>
-                                    <CardContent className="pt-0 space-y-2 text-sm">
-                                      <div className="flex justify-between">
-                                        <span className="text-gray-400">Ссылка:</span>
-                                        <a href={cfg.config_link} className={`${f === "active" ? "text-green-500" : "text-gray-400"} hover:underline`} target="_blank">
-                                          {cfg.config_link}
-                                        </a>
-                                      </div>
-                                      <div className="flex justify-between">
-                                        <span className="text-gray-400">{f === "active" ? "До:" : "Истек:"}</span>
-                                        <span>{new Date(cfg.expiration_date).toLocaleDateString()}</span>
-                                      </div>
-                                    </CardContent>
-                                  </Card>
-                                ))}
-                              </div>
-                            </div>
-                          );
-                        })}
-                      </div>
-                    ) : (
-                      <div className="text-center p-10 bg-card/50 rounded-lg">
-                        {/* ...пустой стейт... */}
-                      </div>
-                    )}
+        return (
+          <div className="space-y-8">
+            {/* Секция активных прокси */}
+            {(proxyFilter === "all" || proxyFilter === "active") && (
+              <section>
+                <h4 className="text-lg font-medium">Активные прокси</h4>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {activeConfigs.map((cfg, idx) => (
+                    <Card key={idx} className="bg-black/40 backdrop-blur-md border border-green-500/30">
+                      <CardHeader className="pb-2">
+                        <div className="flex justify-between items-center">
+                          <CardTitle className="text-base flex items-center">
+                            <Server className="h-4 w-4 mr-2 text-green-500" />
+                            #{idx + 1}
+                          </CardTitle>
+                          <div className="text-xs px-2 py-1 rounded-full border border-green-500/30 text-green-500">
+                            Активен
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-0 space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Ссылка:</span>
+                          <a href={cfg.config_link}
+                             className="text-green-500 hover:underline"
+                             target="_blank">
+                            {cfg.config_link}
+                          </a>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">До:</span>
+                          <span>{new Date(cfg.expiration_date).toLocaleDateString()}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </section>
+            )}
 
-                  </div>
-                </TabsContent>
+            {/* Секция истекших прокси */}
+            {(proxyFilter === "all" || proxyFilter === "expired") && (
+              <section>
+                <h4 className="text-lg font-medium">Истекшие прокси</h4>
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                  {expiredConfigs.map((cfg, idx) => (
+                    <Card key={idx} className="bg-black/40 backdrop-blur-md border border-red-500/20">
+                      <CardHeader className="pb-2">
+                        <div className="flex justify-between items-center">
+                          <CardTitle className="text-base flex items-center">
+                            <Server className="h-4 w-4 mr-2 text-red-500" />
+                            #{idx + 1}
+                          </CardTitle>
+                          <div className="text-xs px-2 py-1 rounded-full border border-red-500/30 text-red-500">
+                            Истек
+                          </div>
+                        </div>
+                      </CardHeader>
+                      <CardContent className="pt-0 space-y-2 text-sm">
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Ссылка:</span>
+                          <a href={cfg.config_link}
+                             className="text-gray-400 hover:underline"
+                             target="_blank">
+                            {cfg.config_link}
+                          </a>
+                        </div>
+                        <div className="flex justify-between">
+                          <span className="text-gray-400">Истек:</span>
+                          <span>{new Date(cfg.expiration_date).toLocaleDateString()}</span>
+                        </div>
+                      </CardContent>
+                    </Card>
+                  ))}
+                </div>
+              </section>
+            )}
+          </div>
+        );
+      })()
+    )}
+  </div>
+</TabsContent>
 
               </Tabs>
             </CardContent>

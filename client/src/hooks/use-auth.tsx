@@ -9,6 +9,16 @@ import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
 import { useToast } from "@/hooks/use-toast";
 import { useLocation } from 'wouter';  // Импортируем useLocation
 
+export type CreateConfigResponse = {
+  config_link: string;
+  expiration_date: string;
+};
+
+export type GetConfigResponse = {
+  config_link: string;
+  expiration_date: string;
+}[];
+
 
 type LoginData = Pick<InsertUser, "username" | "password">;
 
@@ -20,12 +30,6 @@ type UpdateProfileData = {
   newPassword?: string;
 };
 
-// Добавляем тип для мутации создания конфигурации
-type CreateConfigResponse = {
-  config_link: string;
-  expiration_date: string;
-};
-
 type AuthContextType = {
   user: SelectUser | null;
   isLoading: boolean;
@@ -35,6 +39,7 @@ type AuthContextType = {
   registerMutation: UseMutationResult<SelectUser, Error, InsertUser>;
   updateProfileMutation: UseMutationResult<SelectUser, Error, UpdateProfileData>;
   createConfigMutation: UseMutationResult<CreateConfigResponse, Error, void>;
+  // getConfigMutation: UseMutationResult<GetConfigResponse, Error, void>;
 };
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -227,12 +232,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
   });
-
-  
-  type CreateConfigResponse = {
-    config_link: string;
-    expiration_date: string;
-  };
   
   const createConfigMutation = useMutation<CreateConfigResponse>({
     mutationFn: async () => {
@@ -267,6 +266,42 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
   });
+
+  // const getConfigMutation = useMutation<GetConfigResponse>({
+  //   mutationFn: async () => {
+  //     if (!user) throw new Error("Пользователь не найден");
+  
+  //     const res = await apiRequest(
+  //       "GET", 
+  //       `http://localhost:4000/api/users/${user.id}/configurations`, // Параметры в URL
+  //       { credentials: "include" } // Параметры запроса, если нужно
+  //     );
+      
+  //     const data = await res.json();
+  //     if (!res.ok) throw new Error(data.message || "Ошибка получения конфигураций");
+  //     return data as GetConfigResponse; // Теперь используем правильный тип для массива конфигураций
+  //   },
+  //   onSuccess: (data) => {
+  //     toast({
+  //       title: "Конфигурации получены",
+  //       description: `Получено ${data.length} конфигураций.`,
+  //       variant: "default",
+  //     });
+  
+  //     // Обновляем кэш, если нужно, для другой части данных
+  //     queryClient.invalidateQueries({ queryKey: ["configurations", user!.id] });
+  
+  //     // Если нужно — переключаем вкладку или выполняем другие действия
+  //     navigate("/profile?tab=configurations");
+  //   },
+  //   onError: (error: Error) => {
+  //     toast({
+  //       title: "Ошибка получения",
+  //       description: error.message,
+  //       variant: "destructive",
+  //     });
+  //   },
+  // });
   
   
   return (
@@ -279,7 +314,8 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logoutMutation,
         registerMutation,
         updateProfileMutation,
-        createConfigMutation
+        createConfigMutation,
+        // getConfigMutation
       }}
     >
       {children}
