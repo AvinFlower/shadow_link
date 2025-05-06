@@ -1,10 +1,12 @@
+#frontend
 node_modules
 dist
 .DS_Store
-server/public
 vite.config.ts.*
 *.tar.gz
+
+#backend
 app.py
 check_pass.py
 compose.yml
-server/vps_data.py
+server/app/vps_data.py

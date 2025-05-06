@@ -9,3 +9,5 @@ werkzeug
 datetime
 wraps
 uuid
+python-dateutil
+paramiko

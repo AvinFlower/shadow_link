@@ -51,5 +51,6 @@ class UserConfiguration(db.Model):
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
     config_link = db.Column(db.String(255), nullable=False)
     expiration_date = db.Column(db.DateTime, nullable=False)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
 
     user = db.relationship('User', back_populates='configurations')

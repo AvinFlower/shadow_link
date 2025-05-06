@@ -1,9 +1,20 @@
 # app/routes/users.py
-from flask import Blueprint, jsonify, request, make_response
+from flask import Blueprint, jsonify, request
 from flask_login import login_required, current_user
+import uuid
+import os
+from datetime import datetime, timezone
+from dateutil.relativedelta import relativedelta
+
 from ..models.user import User, UserConfiguration
 from ..extensions import db
-from datetime import datetime, timedelta
+from ..vps_data import (
+    insert_inbound_record,
+    insert_traffic_record,
+    restart_xui,
+    generate_vless_link
+)
+
 
 users_bp = Blueprint('users', __name__, url_prefix='/api')
 
@@ -51,36 +62,83 @@ def user_delete(user_id):
     return jsonify({'message': 'User not found'}), 404
 
 @users_bp.route('/users/<int:user_id>/configurations', methods=['POST'])
-# @login_required
 def create_configuration(user_id):
-    if current_user.id != user_id and current_user.role != 'admin':
-        return jsonify({'message': 'Forbidden'}), 403
+    # Проверяем, что пользователь существует и совпадает с текущим
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    # if user.id != current_user.id:
+    #     return jsonify({"error": "Unauthorized"}), 403
 
-    # Получаем данные из запроса
-    data = request.get_json()
-    config_link = data.get('config_link')
-    
-    if not config_link:
-        return jsonify({'message': 'Config link is required'}), 400
-
-    # Генерируем дату окончания (например, через 30 дней)
-    expiration_date = datetime.utcnow() + timedelta(days=30)
-
-    # Создаем новую конфигурацию для пользователя
-    new_config = UserConfiguration(
-        user_id=user_id,
-        config_link=config_link,
-        expiration_date=expiration_date
-    )
+    # Генерация случайного UUID
+    new_uuid = str(uuid.uuid4())  # Генерация UUID
+    port_number = int(os.environ.get("PORT_SUBSCRIPTION", 32955))  # Получаем порт из переменной окружения
+    flow = os.environ.get("FLOW", "xtls-rprx-vision")  # Получаем flow из переменной окружения
 
     try:
-        db.session.add(new_config)
+        # Передаём user.email и параметры в функции vps_data
+        insert_inbound_record(
+            email=user.email,
+            new_uuid=new_uuid,
+            port_number=port_number,
+            flow=flow
+        )
+        insert_traffic_record(
+            email=user.email,
+            port_number=port_number
+        )
+        restart_xui()
+
+        # Генерируем ссылку и дату окончания
+        link = generate_vless_link(
+            email=user.email,
+            new_uuid=new_uuid,
+            port_number=port_number,
+            flow=flow
+        )
+        expiration = datetime.now(timezone.utc) + relativedelta(months=1)
+
+        # Сохраняем в БД
+        config = UserConfiguration(
+            user_id=user.id,
+            config_link=link,
+            expiration_date=expiration
+        )
+        db.session.add(config)
         db.session.commit()
+
         return jsonify({
-            'message': 'Configuration created successfully',
-            'config_link': config_link,
-            'expiration_date': expiration_date.strftime('%Y-%m-%d %H:%M:%S')
+            "config_link": link,
+            "expiration_date": expiration.isoformat()
         }), 201
+
     except Exception as e:
         db.session.rollback()
-        return jsonify({'message': 'Error creating configuration', 'error': str(e)}), 500
+        return jsonify({"error": str(e)}), 500
+    
+    
+
+@users_bp.route('/users/<int:user_id>/configurations', methods=['GET'])
+@login_required
+def get_latest_configuration(user_id):
+    # Проверяем, что пользователь существует и совпадает с текущим
+    user = User.query.get(user_id)
+    if not user:
+        return jsonify({"error": "User not found"}), 404
+    if user.id != current_user.id:
+        return jsonify({"error": "Unauthorized"}), 403
+
+    # Получаем последнюю конфигурацию по дате создания
+    config = UserConfiguration.query \
+        .filter_by(user_id=user.id) \
+        .order_by(UserConfiguration.created_at.desc()) \
+        .first()
+
+    if not config:
+        return jsonify({"error": "Конфигурации не найдены"}), 404
+
+    return jsonify({
+        "config_link": config.config_link,
+        "expiration_date": config.expiration_date.isoformat(),
+        "created_at": config.created_at.isoformat()
+    }), 200

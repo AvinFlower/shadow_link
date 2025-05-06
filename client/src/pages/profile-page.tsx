@@ -7,6 +7,7 @@ import { Link } from 'wouter';
 import { useMutation, useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
+import { apiRequest } from "@/lib/queryClient";
 import {
   Form,
   FormControl,
@@ -67,9 +68,39 @@ type TabKey = "profile" | "credits" | "proxies";
 
 export default function ProfilePage() {
   const { user, updateProfileMutation } = useAuth();
+  const { createConfigMutation } = useAuth();
   const [activeTab, setActiveTab] = useState<TabKey>("profile");
   const [proxyFilter, setProxyFilter] = useState<"all"|"active"|"expired">("all");
   const [paymentMethod, setPaymentMethod] = useState<"card"|"wallet"|"crypto">("card");
+
+
+  // 1) Запрос всех конфигураций
+  const {
+    data: configs,
+    isLoading: configsLoading,
+    error: configsError,
+  } = useQuery<{
+    config_link: string;
+    expiration_date: string;
+    created_at: string;
+  }[]>(
+    {
+      queryKey: ["configurations", user?.id],
+      queryFn: async () => {
+        if (!user) throw new Error("Неавторизован");
+        const res = await apiRequest(
+          "GET",
+          `/api/users/${user.id}/configurations`,
+          { credentials: "include" }
+        );
+        const payload = await res.json();
+        if (!res.ok) throw new Error(payload.message || "Не удалось загрузить");
+        return payload;
+      },
+      enabled: !!user,
+    }
+  );
+  
 
   // Новая мутация для покупки прокси с явными типами
   const purchaseProxyMutation = useMutation<
@@ -84,6 +115,8 @@ export default function ProfilePage() {
         body: JSON.stringify(data),
       }).then(res => res.json()),
   });
+
+  
 
   // Запросы на получение прокси и истории
   const { data: proxies, isLoading: proxiesLoading } = useQuery({
@@ -139,11 +172,7 @@ export default function ProfilePage() {
   }
 
   function onPurchaseSubmit(data: ProxyPurchaseValues) {
-    purchaseProxyMutation.mutate({
-      country: data.country,
-      duration: data.duration,
-      amount: parseFloat(data.price),
-    });
+    createConfigMutation.mutate();
   }
 
   return (
@@ -502,207 +531,74 @@ export default function ProfilePage() {
                       </Button>
                     </div>
 
-                    {proxiesLoading ? (
+                    {configsLoading ? (
                       <div className="flex justify-center p-20">
                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
                       </div>
-                    ) : Array.isArray(proxies) && proxies.length > 0 ? (
+                    ) : configsError ? (
+                      <div className="text-red-500">{configsError.message}</div>
+                    ) : configs && configs.length > 0 ? (
                       <div className="space-y-4">
-                        {/* Активные прокси */}
-                        <h4 className="text-lg font-medium mt-6 mb-3">Активные прокси</h4>
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                          {/* Активный прокси #1 */}
-                          <Card className="bg-black/40 backdrop-blur-md border border-green-500/30">
-                            <CardHeader className="pb-2">
-                              <div className="flex justify-between items-center">
-                                <CardTitle className="text-base flex items-center">
-                                  <Server className="h-4 w-4 mr-2 text-green-500" />
-                                  Residential Proxy #101
-                                </CardTitle>
-                                <div className="text-xs px-2 py-1 rounded-full border border-green-500/30 text-green-500">
-                                  Residential
-                                </div>
-                              </div>
-                            </CardHeader>
-                            <CardContent className="pt-0">
-                              <div className="space-y-2 text-sm">
-                                <div className="flex justify-between">
-                                  <span className="text-gray-400">Подписка:</span>
-                                  <a href="https://shadowlink.io/proxy/101" className="text-green-500 hover:underline">
-                                    shadowlink.io/proxy/101
-                                  </a>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-400">Локация:</span>
-                                  <span>Германия</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-400">Статус:</span>
-                                  <span className="text-green-500">Активен</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-400">Осталось:</span>
-                                  <span className="text-amber-500">15 дней</span>
-                                </div>
-                              </div>
-                              <div className="flex gap-2 justify-end mt-4">
-                                <Button variant="outline" size="sm">
-                                  Копировать ссылку
-                                </Button>
-                                <Button variant="outline" size="sm">
-                                  Продлить
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
+                        {/** фильтрация по proxyFilter */}
+                        {["all","active","expired"].map((f) => {
+                          const filtered = configs.filter(cfg => {
+                            const isActive = new Date(cfg.expiration_date) > new Date();
+                            if (f === "active") return isActive;
+                            if (f === "expired") return !isActive;
+                            return true;
+                          });
+                          if (filtered.length === 0 || (proxyFilter !== "all" && proxyFilter !== f)) return null;
+                          return (
+                            <div key={f}>
+                              <h4 className="text-lg font-medium">
+                                {f === "all" ? "Все прокси" : f === "active" ? "Активные прокси" : "Истекшие прокси"}
+                              </h4>
+                              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                                {filtered.map((cfg, idx) => (
+                                  <Card key={idx} className={`bg-black/40 backdrop-blur-md border ${f === "active" ? "border-green-500/30" : "border-red-500/20"}`}>
+                                    <CardHeader className="pb-2">
+                                      <div className="flex justify-between items-center">
+                                        <CardTitle className="text-base flex items-center">
+                                          <Server className={`h-4 w-4 mr-2 ${f === "active" ? "text-green-500" : "text-red-500"}`} />
+                                          #{idx + 1}
+                                        </CardTitle>
+                                        <div
+                                          className={`text-xs px-2 py-1 rounded-full border ${
+                                            f === "active"
+                                              ? "border-green-500/30 text-green-500"
+                                              : "border-red-500/30 text-red-500"
+                                          }`}
+                                        >
+                                          {f === "active" ? "Активен" : "Истек"}
+                                        </div>
 
-                          {/* Активный прокси #2 */}
-                          <Card className="bg-black/40 backdrop-blur-md border border-green-500/30">
-                            <CardHeader className="pb-2">
-                              <div className="flex justify-between items-center">
-                                <CardTitle className="text-base flex items-center">
-                                  <Server className="h-4 w-4 mr-2 text-green-500" />
-                                  Datacenter Proxy #102
-                                </CardTitle>
-                                <div className="text-xs px-2 py-1 rounded-full border border-green-500/30 text-green-500">
-                                  Datacenter
-                                </div>
+                                      </div>
+                                    </CardHeader>
+                                    <CardContent className="pt-0 space-y-2 text-sm">
+                                      <div className="flex justify-between">
+                                        <span className="text-gray-400">Ссылка:</span>
+                                        <a href={cfg.config_link} className={`${f === "active" ? "text-green-500" : "text-gray-400"} hover:underline`} target="_blank">
+                                          {cfg.config_link}
+                                        </a>
+                                      </div>
+                                      <div className="flex justify-between">
+                                        <span className="text-gray-400">{f === "active" ? "До:" : "Истек:"}</span>
+                                        <span>{new Date(cfg.expiration_date).toLocaleDateString()}</span>
+                                      </div>
+                                    </CardContent>
+                                  </Card>
+                                ))}
                               </div>
-                            </CardHeader>
-                            <CardContent className="pt-0">
-                              <div className="space-y-2 text-sm">
-                                <div className="flex justify-between">
-                                  <span className="text-gray-400">Подписка:</span>
-                                  <a href="https://shadowlink.io/proxy/102" className="text-green-500 hover:underline">
-                                    shadowlink.io/proxy/102
-                                  </a>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-400">Локация:</span>
-                                  <span>США</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-400">Статус:</span>
-                                  <span className="text-green-500">Активен</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-400">Осталось:</span>
-                                  <span className="text-green-500">28 дней</span>
-                                </div>
-                              </div>
-                              <div className="flex gap-2 justify-end mt-4">
-                                <Button variant="outline" size="sm">
-                                  Копировать ссылку
-                                </Button>
-                                <Button variant="outline" size="sm">
-                                  Продлить
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </div>
-
-                        {/* Истекшие прокси */}
-                        <h4 className="text-lg font-medium mt-8 mb-3">Истекшие прокси</h4>
-                        <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                          {/* Истекший прокси #1 */}
-                          <Card className="bg-black/40 backdrop-blur-md border border-red-500/20">
-                            <CardHeader className="pb-2">
-                              <div className="flex justify-between items-center">
-                                <CardTitle className="text-base flex items-center">
-                                  <Server className="h-4 w-4 mr-2 text-red-500" />
-                                  Mobile Proxy #98
-                                </CardTitle>
-                                <div className="text-xs px-2 py-1 rounded-full border border-red-500/30 text-red-500">
-                                  Mobile
-                                </div>
-                              </div>
-                            </CardHeader>
-                            <CardContent className="pt-0">
-                              <div className="space-y-2 text-sm">
-                                <div className="flex justify-between">
-                                  <span className="text-gray-400">Подписка:</span>
-                                  <a href="https://shadowlink.io/proxy/98" className="text-gray-400 hover:underline">
-                                    shadowlink.io/proxy/98
-                                  </a>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-400">Локация:</span>
-                                  <span>Франция</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-400">Статус:</span>
-                                  <span className="text-red-500">Истек</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-400">Истек:</span>
-                                  <span className="text-gray-400">15.03.2025</span>
-                                </div>
-                              </div>
-                              <div className="flex gap-2 justify-end mt-4">
-                                <Button variant="outline" size="sm">
-                                  Восстановить
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
-
-                          {/* Истекший прокси #2 */}
-                          <Card className="bg-black/40 backdrop-blur-md border border-red-500/20">
-                            <CardHeader className="pb-2">
-                              <div className="flex justify-between items-center">
-                                <CardTitle className="text-base flex items-center">
-                                  <Server className="h-4 w-4 mr-2 text-red-500" />
-                                  Datacenter Proxy #85
-                                </CardTitle>
-                                <div className="text-xs px-2 py-1 rounded-full border border-red-500/30 text-red-500">
-                                  Datacenter
-                                </div>
-                              </div>
-                            </CardHeader>
-                            <CardContent className="pt-0">
-                              <div className="space-y-2 text-sm">
-                                <div className="flex justify-between">
-                                  <span className="text-gray-400">Подписка:</span>
-                                  <a href="https://shadowlink.io/proxy/85" className="text-gray-400 hover:underline">
-                                    shadowlink.io/proxy/85
-                                  </a>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-400">Локация:</span>
-                                  <span>Сингапур</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-400">Статус:</span>
-                                  <span className="text-red-500">Истек</span>
-                                </div>
-                                <div className="flex justify-between">
-                                  <span className="text-gray-400">Истек:</span>
-                                  <span className="text-gray-400">28.02.2025</span>
-                                </div>
-                              </div>
-                              <div className="flex gap-2 justify-end mt-4">
-                                <Button variant="outline" size="sm">
-                                  Восстановить
-                                </Button>
-                              </div>
-                            </CardContent>
-                          </Card>
-                        </div>
+                            </div>
+                          );
+                        })}
                       </div>
                     ) : (
                       <div className="text-center p-10 bg-card/50 rounded-lg">
-                        <Server className="h-16 w-16 text-gray-400 mx-auto mb-4" />
-                        <h3 className="text-xl font-medium mb-2">История прокси пуста</h3>
-                        <p className="text-gray-400 mb-4">
-                          У вас пока нет прокси в истории. Купите свою первую конфигурацию,
-                          чтобы начать работу.
-                        </p>
-                        <Button type="button" onClick={() => setActiveTab("credits")}>
-                          Купить конфигурацию
-                        </Button>
+                        {/* ...пустой стейт... */}
                       </div>
                     )}
+
                   </div>
                 </TabsContent>
 

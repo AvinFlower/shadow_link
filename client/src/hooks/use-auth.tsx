@@ -20,6 +20,12 @@ type UpdateProfileData = {
   newPassword?: string;
 };
 
+// Добавляем тип для мутации создания конфигурации
+type CreateConfigResponse = {
+  config_link: string;
+  expiration_date: string;
+};
+
 type AuthContextType = {
   user: SelectUser | null;
   isLoading: boolean;
@@ -27,15 +33,16 @@ type AuthContextType = {
   loginMutation: UseMutationResult<SelectUser, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
   registerMutation: UseMutationResult<SelectUser, Error, InsertUser>;
-  // <- здесь заменяем Partial<SelectUser>… на наш UpdateProfileData
   updateProfileMutation: UseMutationResult<SelectUser, Error, UpdateProfileData>;
-  addCreditsMutation: UseMutationResult<SelectUser, Error, { amount: number }>;
+  createConfigMutation: UseMutationResult<CreateConfigResponse, Error, void>;
 };
 
 export const AuthContext = createContext<AuthContextType | null>(null);
 
 export function AuthProvider({ children }: { children: ReactNode }) {
   const { toast } = useToast();
+  const [location, navigate] = useLocation();  // Правильная деструктуризация
+  
   const {
     data: user,
     error,
@@ -44,8 +51,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     queryKey: ["/api/user"],
     queryFn: getQueryFn({ on401: "returnNull" }),
   });
-
-  const [location, navigate] = useLocation();  // Правильная деструктуризация
 
   async function checkCurrentPassword(password: string): Promise<boolean> {
     const res = await apiRequest("POST", "/api/check-password", { password });
@@ -222,30 +227,48 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       });
     },
   });
+
   
+  type CreateConfigResponse = {
+    config_link: string;
+    expiration_date: string;
+  };
   
-  const addCreditsMutation = useMutation({
-    mutationFn: async ({ amount }: {amount: number}) => {
-      const res = await apiRequest("POST", "http://localhost:4000/api/proxy-credits", { amount });
-      return await res.json();
+  const createConfigMutation = useMutation<CreateConfigResponse>({
+    mutationFn: async () => {
+      if (!user) throw new Error("Пользователь не найден");
+  
+      const res = await apiRequest(
+        "POST",
+        `http://localhost:4000/api/users/${user.id}/configurations`,
+        { credentials: "include" }
+      );
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.message || "Ошибка генерации конфигурации");
+      return data as CreateConfigResponse;
     },
-    onSuccess: (user: SelectUser) => {
-      queryClient.setQueryData(["/api/user"], user);
+    onSuccess: (data) => {
       toast({
-        title: "Кредиты добавлены",
-        description: `Ваш баланс успешно пополнен`,
+        title: "Конфигурация создана",
+        description: `Срок действия: ${new Date(data.expiration_date).toLocaleString()}`,
         variant: "default",
       });
+  
+      // 1) Сбрасываем кэш списка конфигураций
+      queryClient.invalidateQueries({ queryKey: ["configurations", user!.id] });
+      // 2) Переключаем вкладку профиля на «proxies»
+      navigate("/profile?tab=proxies"); // или setActiveTab внутри ProfilePage
     },
     onError: (error: Error) => {
       toast({
-        title: "Ошибка пополнения",
+        title: "Ошибка генерации",
         description: error.message,
         variant: "destructive",
       });
     },
   });
-
+  
+  
   return (
     <AuthContext.Provider
       value={{
@@ -256,7 +279,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         logoutMutation,
         registerMutation,
         updateProfileMutation,
-        addCreditsMutation
+        createConfigMutation
       }}
     >
       {children}
