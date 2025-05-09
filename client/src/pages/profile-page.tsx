@@ -128,26 +128,12 @@ export default function ProfilePage() {
     enabled: !!user,
   });
 
-  // Новая мутация для покупки прокси с явными типами
-  const purchaseProxyMutation = useMutation<
-    any,
-    Error,
-    PurchaseVars
-  >({
-    mutationFn: (data: PurchaseVars) => {
-      const token = localStorage.getItem('access_token'); // Получаем токен из localStorage
-    
-      return fetch("/api/purchase-proxy", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Authorization": `Bearer ${token}`,  // Добавляем токен в заголовок
-        },
-        body: JSON.stringify(data),
-      }).then(res => res.json());
-    },
-  });
-
+  // function onPurchaseSubmit(data: ProxyPurchaseValues) {
+  //   createConfigMutation.mutate(data);
+  // }
+  function onPurchaseSubmit() {
+    createConfigMutation.mutate();
+  }
 
   // Формы
   const profileForm = useForm<ProfileValues>({
@@ -214,11 +200,6 @@ export default function ProfilePage() {
       }
     );
   };
-  
-
-  function onPurchaseSubmit(data: ProxyPurchaseValues) {
-    createConfigMutation.mutate();
-  }
 
   // разделяем на активные и истёкшие
   const activeConfigs  = useMemo(

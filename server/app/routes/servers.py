@@ -1,0 +1,85 @@
+from flask import Blueprint, request, jsonify, make_response
+from flask_jwt_extended import jwt_required, get_jwt_identity
+
+from ..extensions import db
+from ..models.user import User
+from ..models.server import Server
+
+server_bp = Blueprint('servers', __name__, url_prefix='/api')
+
+
+# GET /api/servers — получить все серверы
+@server_bp.route('/servers', methods=['GET'])
+@jwt_required()
+def get_servers():
+    current_user_id = int(get_jwt_identity())
+    current = User.query.get(current_user_id)
+    if not current or current.role != 'admin':
+        return jsonify({'message': 'Access denied'}), 403
+    
+    servers = Server.query.all()
+    return jsonify([{
+        "id": s.id,
+        "country": s.country,
+        "ip": s.ip,
+        "port": s.port,
+        "username": s.username,
+        "password": s.password
+    } for s in servers]), 200
+
+# POST /api/servers — создать новый сервер (только админ)
+@server_bp.route('/servers', methods=['POST'])
+@jwt_required()
+def create_server():
+    current_user_id = int(get_jwt_identity())
+    current = User.query.get(current_user_id)
+    if not current or current.role != 'admin':
+        return jsonify({'message': 'Access denied'}), 403
+
+    data = request.get_json() or {}
+    required_fields = ['country', 'ip', 'port', 'username', 'password']
+    if not all(field in data for field in required_fields):
+        return jsonify({'message': 'Missing fields'}), 400
+
+    server = Server(**{field: data[field] for field in required_fields})
+    db.session.add(server)
+    db.session.commit()
+    return jsonify({'message': 'Server created', 'id': server.id}), 201
+
+# PUT /api/servers/<int:server_id> — обновить сервер (только админ)
+@server_bp.route('/servers/<int:server_id>', methods=['PUT'])
+@jwt_required()
+def update_server(server_id):
+    current_user_id = int(get_jwt_identity())
+    current = User.query.get(current_user_id)
+    if not current or current.role != 'admin':
+        return jsonify({'message': 'Access denied'}), 403
+
+    server = Server.query.get(server_id)
+    if not server:
+        return jsonify({'message': 'Server not found'}), 404
+
+    data = request.get_json() or {}
+    for field in ['country', 'ip', 'port', 'username', 'password']:
+        if field in data:
+            setattr(server, field, data[field])
+
+    db.session.commit()
+    return jsonify({'message': 'Server updated'}), 200
+
+# DELETE /api/servers/<int:server_id> — удалить сервер (только админ)
+@server_bp.route('/servers/<int:server_id>', methods=['DELETE'])
+@jwt_required()
+def delete_server(server_id):
+    current_user_id = int(get_jwt_identity())
+    current = User.query.get(current_user_id)
+    if not current or current.role != 'admin':
+        return jsonify({'message': 'Access denied'}), 403
+
+    server = Server.query.get(server_id)
+    if not server:
+        return jsonify({'message': 'Server not found'}), 404
+
+    db.session.delete(server)
+    db.session.commit()
+    return jsonify({'message': 'Server deleted'}), 200

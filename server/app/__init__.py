@@ -4,6 +4,7 @@ from .extensions import db, bcrypt, login_manager, cors, jwt
 from .routes.auth import auth_bp
 from .routes.users import users_bp
 from .routes.admin import admin_bp
+from .routes.servers import server_bp
 from .models.user import User
 
 def create_app():
@@ -37,6 +38,7 @@ def create_app():
     app.register_blueprint(auth_bp)
     app.register_blueprint(users_bp)
     app.register_blueprint(admin_bp)
+    app.register_blueprint(server_bp)
 
     with app.app_context():
         db.create_all()

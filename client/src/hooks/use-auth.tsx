@@ -290,7 +290,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!user) throw new Error("Пользователь не найден");
     
         // Получаем токен
-        const token = localStorage.getItem("jwt_token");
+        const token = localStorage.getItem("access_token");
         console.log("Токен из localStorage:", token); // Логируем токен
     
         if (!token) throw new Error("Необходим токен для авторизации");

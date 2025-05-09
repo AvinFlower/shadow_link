@@ -109,35 +109,62 @@ def delete_user(user_id):
 @users_bp.route('/users/<int:user_id>/configurations', methods=['POST'])
 @jwt_required()
 def create_configuration(user_id):
-    # Генерация уникального email на основе UUID
-    unique_email = f"UnknownSoldier_{str(uuid.uuid4())[:8]}"  # Пример: user_9f8b8f82@example.com
-    new_uuid = str(uuid.uuid4())
-    port_number = int(os.environ.get("PORT_SUBSCRIPTION", 32955))
-    flow = os.environ.get("FLOW", "xtls-rprx-vision")
+    data = request.get_json()
+    country = data.get('country')  # Получаем страну от пользователя
+    duration_months = int(data.get('duration_months', 1))  # по умолчанию 1 месяц
+    price_by_months = {1: 100, 3: 250, 6: 500, 12: 1000}
+    price = price_by_months.get(duration_months)
     
+    if price is None:
+        return jsonify({"error": "Неверный срок подписки"}), 400
+
+    if not country:
+        return jsonify({"error": "Страна не указана"}), 400
+
+    expiration = datetime.utcnow() + timedelta(days=30 * duration_months)
+
+    # Получаем сервер по стране
+    server = Server.query.filter_by(country=country).first()
+    if not server:
+        return jsonify({"error": "Сервер с указанной страной не найден"}), 404
+
+    unique_email = f"UnknownSoldier_{str(uuid.uuid4())[:8]}"
+    new_uuid = str(uuid.uuid4())
+    port_number = server.port  # Берем порт из базы данных сервера
+    flow = server.flow  # Берем flow из базы данных сервера
+
     try:
+        # Вставляем данные в систему (условно)
         insert_inbound_record(email=unique_email, new_uuid=new_uuid, port_number=port_number, flow=flow, user_id=user_id)
         insert_traffic_record(email=unique_email, port_number=port_number)
         restart_xui()
 
+        # Генерируем ссылку конфигурации
         link = generate_vless_link(email=unique_email, new_uuid=new_uuid, port_number=port_number, flow=flow)
 
+        # Создаем конфигурацию для пользователя
         config = UserConfiguration(
             user_id=user_id,
             client_uuid=new_uuid,
             config_link=link,
-            expiration_date=expiration
+            expiration_date=expiration,
+            country=country,
+            price=price
         )
         db.session.add(config)
         db.session.commit()
 
         return jsonify({
             "config_link": link,
-            "expiration_date": expiration.isoformat()
+            "expiration_date": expiration.isoformat(),
+            "country": country,
+            "price": price
         }), 201
+
     except Exception as e:
         db.session.rollback()
         return jsonify({"error": str(e)}), 500
+
 
 # GET /api/users/<id>/configurations — список конфигураций (самому себе)
 @users_bp.route('/users/<int:user_id>/configurations', methods=['GET'])

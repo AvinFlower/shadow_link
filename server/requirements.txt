@@ -12,3 +12,4 @@ uuid
 python-dateutil
 paramiko
 flask_jwt_extended
+dotenv
