@@ -49,15 +49,16 @@ class UserConfiguration(db.Model):
 
     id = db.Column(db.Integer, primary_key=True)
     user_id = db.Column(db.Integer, db.ForeignKey('users.id'), nullable=False)
-    server_id = db.Column(db.Integer, db.ForeignKey('servers.id'), nullable=False)  # <== ссылка на сервер
+    server_id = db.Column(db.Integer, db.ForeignKey('servers.id'), nullable=False)
     client_uuid = db.Column(db.String(36), unique=True, nullable=False)
     config_link = db.Column(db.String(255), nullable=False)
     price = db.Column(db.Integer, nullable=False)
     expiration_date = db.Column(db.DateTime, nullable=False)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    flow = db.Column(db.String(200), nullable=False)
 
     user = db.relationship('User', back_populates='configurations')
-    server = db.relationship('Server', back_populates='configurations')  # <== доступ к серверу через отношение
+    server = db.relationship('Server', back_populates='configurations')
 
 
 # INSERT INTO users (username, email, password, role, birth_date, full_name, last_login, created_at)

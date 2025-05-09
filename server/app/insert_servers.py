@@ -20,9 +20,8 @@ def insert_servers():
         username = os.getenv(f'USER{i}')
         password = os.getenv(f'PASS{i}')
         port_subscription = os.getenv(f'PORT_SUBSCRIPTION{i}')
-        flow = os.getenv(f'FLOW{i}')
 
-        if not all([ip, ssh_port, username, password, port_subscription, flow]):
+        if not all([ip, ssh_port, username, password, port_subscription]):
             print(f"Пропущен сервер {i} из-за отсутствующих данных.")
             i += 1
             continue

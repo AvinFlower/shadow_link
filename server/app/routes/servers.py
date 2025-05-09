@@ -14,8 +14,8 @@ server_bp = Blueprint('servers', __name__, url_prefix='/api')
 @server_bp.route('/servers', methods=['GET'])
 # @jwt_required()
 def get_servers():
-    current_user_id = int(get_jwt_identity())
-    current = User.query.get(current_user_id)
+    # current_user_id = int(get_jwt_identity())
+    # current = User.query.get(current_user_id)
     # if not current or current.role != 'admin':
 #        return jsonify({'message': 'Access denied'}), 403
     

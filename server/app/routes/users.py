@@ -107,7 +107,7 @@ def delete_user(user_id):
 
 # POST /api/users/<id>/configurations — создать конфигурацию (самому себе)
 @users_bp.route('/users/<int:user_id>/configurations', methods=['POST'])
-@jwt_required()
+# @jwt_required()
 def create_configuration(user_id):
     data = request.get_json()
     country = data.get('country')  # Получаем страну от пользователя
