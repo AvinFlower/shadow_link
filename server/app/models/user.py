@@ -58,3 +58,29 @@ class UserConfiguration(db.Model):
 
     user = db.relationship('User', back_populates='configurations')
     server = db.relationship('Server', back_populates='configurations')  # <== доступ к серверу через отношение
+
+
+# INSERT INTO users (username, email, password, role, birth_date, full_name, last_login, created_at)
+# VALUES (
+#     'admin', 
+#     'admin@example.com', 
+#     '$2b$12$C1g0vfrnQ0UGgXEgPsoCFEg7Av7fpQQOY5yINH1Gp7D38C8KOe8tm', 
+#     'admin', 
+#     '1990-01-01', 
+#     'Administrator', 
+#     CURRENT_TIMESTAMP, 
+#     CURRENT_TIMESTAMP
+# );
+
+
+# INSERT INTO users (username, email, password, role, birth_date, full_name, last_login, created_at)
+# VALUES (
+#     'user', 
+#     'user@example.com', 
+#     '$2b$12$C1g0vfrnQ0UGgXEgPsoCFEg7Av7fpQQOY5yINH1Gp7D38C8KOe8tm', 
+#     'user', 
+#     '1990-01-01', 
+#     'User', 
+#     CURRENT_TIMESTAMP, 
+#     CURRENT_TIMESTAMP
+# );

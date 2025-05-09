@@ -4,18 +4,20 @@ from flask_jwt_extended import jwt_required, get_jwt_identity
 from ..extensions import db
 from ..models.user import User
 from ..models.server import Server
+from ..insert_servers import insert_servers
+
 
 server_bp = Blueprint('servers', __name__, url_prefix='/api')
 
 
 # GET /api/servers — получить все серверы
 @server_bp.route('/servers', methods=['GET'])
-@jwt_required()
+# @jwt_required()
 def get_servers():
     current_user_id = int(get_jwt_identity())
     current = User.query.get(current_user_id)
-    if not current or current.role != 'admin':
-        return jsonify({'message': 'Access denied'}), 403
+    # if not current or current.role != 'admin':
+#        return jsonify({'message': 'Access denied'}), 403
     
     servers = Server.query.all()
     return jsonify([{
@@ -28,32 +30,26 @@ def get_servers():
     } for s in servers]), 200
 
 # POST /api/servers — создать новый сервер (только админ)
-@server_bp.route('/servers', methods=['POST'])
-@jwt_required()
-def create_server():
-    current_user_id = int(get_jwt_identity())
-    current = User.query.get(current_user_id)
-    if not current or current.role != 'admin':
-        return jsonify({'message': 'Access denied'}), 403
+@server_bp.route('/servers/import-from-env', methods=['POST'])
+# @jwt_required()
+def import_servers_from_env():
+    # current_user_id = int(get_jwt_identity())
+    # current = User.query.get(current_user_id)
+    # if not current or current.role != 'admin':
+#        return jsonify({'message': 'Access denied'}), 403
 
-    data = request.get_json() or {}
-    required_fields = ['country', 'ip', 'port', 'username', 'password']
-    if not all(field in data for field in required_fields):
-        return jsonify({'message': 'Missing fields'}), 400
+    insert_servers()
+    return jsonify({'message': 'Servers from .env inserted'}), 201
 
-    server = Server(**{field: data[field] for field in required_fields})
-    db.session.add(server)
-    db.session.commit()
-    return jsonify({'message': 'Server created', 'id': server.id}), 201
 
 # PUT /api/servers/<int:server_id> — обновить сервер (только админ)
 @server_bp.route('/servers/<int:server_id>', methods=['PUT'])
-@jwt_required()
+# @jwt_required()
 def update_server(server_id):
     current_user_id = int(get_jwt_identity())
     current = User.query.get(current_user_id)
-    if not current or current.role != 'admin':
-        return jsonify({'message': 'Access denied'}), 403
+    # if not current or current.role != 'admin':
+#        return jsonify({'message': 'Access denied'}), 403
 
     server = Server.query.get(server_id)
     if not server:
@@ -69,12 +65,12 @@ def update_server(server_id):
 
 # DELETE /api/servers/<int:server_id> — удалить сервер (только админ)
 @server_bp.route('/servers/<int:server_id>', methods=['DELETE'])
-@jwt_required()
+# @jwt_required()
 def delete_server(server_id):
     current_user_id = int(get_jwt_identity())
     current = User.query.get(current_user_id)
-    if not current or current.role != 'admin':
-        return jsonify({'message': 'Access denied'}), 403
+    # if not current or current.role != 'admin':
+#        return jsonify({'message': 'Access denied'}), 403
 
     server = Server.query.get(server_id)
     if not server:

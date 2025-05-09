@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
-from server import Server
-from ..extensions import db
+from .models.server import Server
+from .extensions import db
 
 # Загружаем переменные из .env
 load_dotenv()
@@ -15,7 +15,7 @@ def insert_servers():
             break
 
         # Извлекаем остальные данные для сервера
-        country = os.getenv(f'COUNTRY{i}', f'Country{i}')  # Например, COUNTRY1, COUNTRY2 и т.д.
+        country = os.getenv(f'COUNTRY{i}')  # Например, COUNTRY1, COUNTRY2 и т.д.
         ssh_port = os.getenv(f'SSH_PORT{i}')
         username = os.getenv(f'USER{i}')
         password = os.getenv(f'PASS{i}')

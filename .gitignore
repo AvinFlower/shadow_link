@@ -10,3 +10,4 @@ app.py
 check_pass.py
 compose.yml
 server/app/vps_data.py
+server/.env
