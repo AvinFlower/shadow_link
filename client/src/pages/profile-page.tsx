@@ -540,8 +540,12 @@ export default function ProfilePage() {
                               </div>
                               
                               {/* Кнопка Купить */}
-                              <Button type="submit" disabled={purchaseProxyMutation.status === "pending"} className="h-10">
-                                {purchaseProxyMutation.status === "pending" ? (
+                              <Button
+                                onClick={() => createConfigMutation.mutate()}
+                                disabled={createConfigMutation.status === "pending"}
+                                className="h-10"
+                              >
+                                {createConfigMutation.status === "pending" ? (
                                   <>
                                     <Loader2 className="mr-2 h-4 w-4 animate-spin" />
                                     Обработка...

@@ -285,51 +285,53 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       },
     });
   
-const createConfigMutation = useMutation<CreateConfigResponse>({
-  mutationFn: async () => {
-    if (!user) throw new Error("Пользователь не найден");
-
-    // Получаем токен (например, из localStorage, или получаем его как-то по-другому)
-    const token = localStorage.getItem("jwt_token");
-
-    if (!token) throw new Error("Необходим токен для авторизации");
-
-    const res = await apiRequest(
-      "POST",
-      `http://localhost:4000/api/users/${user.id}/configurations`,
-      {
-        headers: {
-          "Authorization": `Bearer ${token}`, // Добавляем токен в заголовок
-        },
-        credentials: "include",
-      }
-    );
-    const data = await res.json();
-    if (!res.ok) throw new Error(data.message || "Ошибка генерации конфигурации");
-    return data as CreateConfigResponse;
-  },
-
-  onSuccess: (data) => {
-    toast({
-      title: "Конфигурация создана",
-      description: `Срок действия: ${new Date(data.expiration_date).toLocaleString()}`,
-      variant: "default",
+    const createConfigMutation = useMutation<CreateConfigResponse>({
+      mutationFn: async () => {
+        if (!user) throw new Error("Пользователь не найден");
+    
+        // Получаем токен
+        const token = localStorage.getItem("jwt_token");
+        console.log("Токен из localStorage:", token); // Логируем токен
+    
+        if (!token) throw new Error("Необходим токен для авторизации");
+    
+        const res = await apiRequest(
+          "POST",
+          `http://localhost:4000/api/users/${user.id}/configurations`,
+          {
+            headers: {
+              "Authorization": `Bearer ${token}`, // Добавляем токен в заголовок
+            },
+            credentials: "include",
+          }
+        );
+        const data = await res.json();
+        if (!res.ok) throw new Error(data.message || "Ошибка генерации конфигурации");
+        return data as CreateConfigResponse;
+      },
+    
+      onSuccess: (data) => {
+        toast({
+          title: "Конфигурация создана",
+          description: `Срок действия: ${new Date(data.expiration_date).toLocaleString()}`,
+          variant: "default",
+        });
+    
+        // 1) Сбрасываем кэш списка конфигураций
+        queryClient.invalidateQueries({ queryKey: ["configurations", user!.id] });
+        // 2) Переключаем вкладку профиля на «proxies»
+        window.location.href = "/profile?tab=proxies";
+      },
+    
+      onError: (error: Error) => {
+        toast({
+          title: "Ошибка генерации",
+          description: error.message,
+          variant: "destructive",
+        });
+      },
     });
-
-    // 1) Сбрасываем кэш списка конфигураций
-    queryClient.invalidateQueries({ queryKey: ["configurations", user!.id] });
-    // 2) Переключаем вкладку профиля на «proxies»
-    navigate("/profile?tab=proxies"); // или setActiveTab внутри ProfilePage
-  },
-
-  onError: (error: Error) => {
-    toast({
-      title: "Ошибка генерации",
-      description: error.message,
-      variant: "destructive",
-    });
-  },
-});
+    
 
   
   return (
