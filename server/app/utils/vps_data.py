@@ -124,7 +124,7 @@ def insert_inbound_record(
     ssh_username: str,
     ssh_password: str,
     x_ui_port: str
-) -> str:  # возвращаем только строку
+) -> str:
     try:
         ssh = ssh_connect(host, port, ssh_username, ssh_password)
         db_path = "/etc/x-ui/x-ui.db"
@@ -135,6 +135,7 @@ def insert_inbound_record(
             '       json_extract(stream_settings, \'$.realitySettings.shortIds[0]\') AS first_short_id '
             f'FROM inbounds WHERE port = {x_ui_port};'
         )
+
         cmd = f'sqlite3 {db_path} \"{sql}\"'
         stdin, stdout, stderr = ssh.exec_command(cmd)
         out = stdout.read().decode().strip()
@@ -146,6 +147,7 @@ def insert_inbound_record(
         if not first_short_id:
             raise Exception(f"No first_short_id found in line: {out}")
 
+        # Загружаем JSON и добавляем клиента
         cfg = json.loads(settings_json)
         sub_id = _uuid.uuid4().hex[:12]
         expiry_ms = int((datetime.now(timezone.utc) + relativedelta(months=months)).timestamp() * 1000)
@@ -166,8 +168,11 @@ def insert_inbound_record(
 
         cfg["clients"].append(client)
 
+        # Формируем строку JSON с отступами (столбик)
+        pretty_json = json.dumps(cfg, indent=4)
+
         # Кодирование JSON через base64 для безопасности
-        encoded_cfg = base64.b64encode(json.dumps(cfg).encode()).decode()
+        encoded_cfg = base64.b64encode(pretty_json.encode()).decode()
 
         # Формируем запрос с base64
         upd_cmd = (
