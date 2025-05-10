@@ -1,7 +1,7 @@
 import os
 from dotenv import load_dotenv
-from .models.server import Server
-from .extensions import db
+from app.models.server import Server
+from app.extensions import db
 
 # Загружаем переменные из .env
 load_dotenv()
@@ -10,34 +10,47 @@ def insert_servers():
     i = 1  # Начинаем с первого сервера
     while True:
         # Проверяем, есть ли переменная для текущего сервера
-        ip = os.getenv(f'HOST{i}')
-        if not ip:  # Если переменной нет, значит, серверов больше нет
+        host = os.getenv(f'HOST{i}')
+        if not host:  # Если переменной нет, значит, серверов больше нет
             break
 
         # Извлекаем остальные данные для сервера
         country = os.getenv(f'COUNTRY{i}')  # Например, COUNTRY1, COUNTRY2 и т.д.
-        ssh_port = os.getenv(f'SSH_PORT{i}')
-        username = os.getenv(f'USER{i}')
-        password = os.getenv(f'PASS{i}')
-        port_subscription = os.getenv(f'PORT_SUBSCRIPTION{i}')
+        port = os.getenv(f'PORT{i}')
+        ssh_username = os.getenv(f'USERNAME{i}')
+        ssh_password = os.getenv(f'PASSWORD{i}')
+        max_users = os.getenv(f'MAX_USERS{i}')
 
-        if not all([ip, ssh_port, username, password, port_subscription]):
+        if not all([host, port, ssh_username, ssh_password, max_users]):
             print(f"Пропущен сервер {i} из-за отсутствующих данных.")
             i += 1
             continue
+        
+        existing_server = Server.query.filter_by(host=host, port=port).first()
+        if existing_server:
+            print(f"Сервер {i} уже существует, пропускаем.")
+            i += 1
+            continue
+
 
         # Создаем новый сервер с использованием данных из .env
         new_server = Server(
             country=country,
-            ip=ip,
-            port=port_subscription,  # Используем PORT_SUBSCRIPTION для порта
-            username=username,
-            password=password
+            host=host,
+            port=port,
+            ssh_username=ssh_username,
+            ssh_password=ssh_password,
+            max_users=max_users
         )
 
         # Добавляем сервер в сессию и коммитим изменения
         db.session.add(new_server)
-        db.session.commit()
+        try:
+            db.session.commit()
+        except Exception as e:
+            db.session.rollback()
+            print(f"Ошибка при добавлении сервера {i}: {e}")
+
 
         print(f"Сервер {i} добавлен успешно!")
         i += 1  # Переходим к следующему серверу

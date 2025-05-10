@@ -1,7 +1,7 @@
 # app/routes/auth.py
 from flask import Blueprint, request, jsonify, make_response
-from ..models.user import User
-from ..extensions import db
+from app.models.user import User
+from app.extensions import db
 from datetime import datetime, timedelta
 from flask_jwt_extended import create_access_token, jwt_required, get_jwt_identity, get_jwt
 
@@ -76,10 +76,13 @@ def login():
     access_token = create_access_token(identity=str(user.id), expires_delta=timedelta(days=7))
 
     return jsonify({
-        'message': 'Login successful',
-        'access_token': access_token,
-        'user': user.to_json()
-    }), 200
+    'message': 'Login successful',
+    'access': {
+        'jwt_token': access_token,
+        'expires_at': (datetime.utcnow() + timedelta(days=7)).isoformat()  # Пример, токен истекает через 1 час
+    },
+    'user': user.to_json()
+}), 200
 
 
 @auth_bp.route('/logout', methods=['POST'])

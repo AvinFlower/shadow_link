@@ -1,6 +1,6 @@
 # app/routes/admin.py
 from flask import Blueprint, jsonify
-from ..decorators import admin_required
+from app.decorators import admin_required
 
 admin_bp = Blueprint('admin', __name__, url_prefix='/api')
 

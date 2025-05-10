@@ -1,10 +1,11 @@
 from flask import Blueprint, request, jsonify, make_response
 from flask_jwt_extended import jwt_required, get_jwt_identity
 
-from ..extensions import db
-from ..models.user import User
-from ..models.server import Server
-from ..insert_servers import insert_servers
+from app.extensions import db
+from app.models.user import User
+from app.models.server import Server
+from app.utils.insert_servers import insert_servers
+
 
 
 server_bp = Blueprint('servers', __name__, url_prefix='/api')
