@@ -17,27 +17,6 @@ load_dotenv()
 public_key = os.getenv('PUBLIC_KEY')
 domain = os.getenv('DOMAIN')
 
-def generate_vless_link(
-    email: str,
-    client_uuid: str,
-    host: str,
-    x_ui_port: int,
-    flow: str,
-    sid: str
-) -> str:
-    """
-    Составляем vless:// ссылку, используя переданный host и port.
-    """
-    spx = quote('/')  # => '%2F'
-    params = (
-        f"type=tcp&security=reality"
-        f"&pbk={public_key}"
-        f"&fp=chrome&sni={domain}"
-        f"&sid={sid}&spx={spx}&flow={flow}"
-    )
-    return f"vless://{client_uuid}@{host}:{x_ui_port}?{params}#{email}"
-
-
 def count_users_on_port(
     host: str, 
     port: int, 
@@ -149,17 +128,25 @@ def insert_inbound_record(
 
         # Загружаем JSON и добавляем клиента
         cfg = json.loads(settings_json)
-        sub_id = _uuid.uuid4().hex[:12]
+        # sub_id = _uuid.uuid4().hex[:12]
         expiry_ms = int((datetime.now(timezone.utc) + relativedelta(months=months)).timestamp() * 1000)
 
+
+        # ⬇️ Генерируем ссылку заранее
+        config_link = generate_vless_link(email, client_uuid, host, x_ui_port, flow, first_short_id)
+        
         client = {
-            "comment": str(user_id),
+            "host": host,
+            "user_id": user_id,
+            "months": months,
+            "link": config_link,
+            "empty_data_here": "=============================BELOW_IS_THE_VPS_DATA=============================",
             "email": email,
             "enable": True,
             "expiryTime": expiry_ms,
             "flow": flow,
             "id": client_uuid,
-            "subId": sub_id,
+            # "subId": sub_id,
             "limitIp": 0,
             "reset": 0,
             "tgId": "",
@@ -170,7 +157,7 @@ def insert_inbound_record(
 
         # Формируем строку JSON с отступами (столбик)
         pretty_json = json.dumps(cfg, indent=4)
-
+        
         # Кодирование JSON через base64 для безопасности
         encoded_cfg = base64.b64encode(pretty_json.encode()).decode()
 
@@ -187,7 +174,54 @@ def insert_inbound_record(
             raise Exception(f"Ошибка при выполнении UPDATE: {err}")
 
         # Возвращаем ссылку
-        return generate_vless_link(email, client_uuid, host, x_ui_port, flow, first_short_id)
+        return config_link
+
+    finally:
+        ssh.close()
+        
+        
+def generate_vless_link(
+    email: str,
+    client_uuid: str,
+    host: str,
+    x_ui_port: int,
+    flow: str,
+    sid: str
+) -> str:
+    """
+    Составляем vless:// ссылку, используя переданный host и port.
+    """
+    spx = quote('/')  # => '%2F'
+    params = (
+        f"type=tcp&security=reality"
+        f"&pbk={public_key}"
+        f"&fp=chrome&sni={domain}"
+        f"&sid={sid}&spx={spx}&flow={flow}"
+    )
+    return f"vless://{client_uuid}@{host}:{x_ui_port}?{params}#{email}"
+
+
+
+def get_vps_clients_configurations(host, port, ssh_username, ssh_password, x_ui_port):
+    try:
+        ssh = ssh_connect(host, port, ssh_username, ssh_password)
+        db_path = "/etc/x-ui/x-ui.db"
+
+        # Извлекаем clients из JSON-колонки settings, а не из stream_settings
+        sql = (
+            'SELECT json_extract(settings, \'$.clients\') AS clients '
+            f'FROM inbounds WHERE port = {x_ui_port};'
+        )
+
+        cmd = f'sqlite3 {db_path} "{sql}"'
+        stdin, stdout, stderr = ssh.exec_command(cmd)
+        out = stdout.read().decode().strip()
+
+        if not out:
+            raise Exception("Конфигурации клиентов на VPS не найдены")
+
+        clients = json.loads(out)  # теперь это массив dict-ов с нужными полями
+        return clients
 
     finally:
         ssh.close()
