@@ -18,6 +18,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Shield, Lock, User, Loader2 } from "lucide-react";
 import { motion } from "framer-motion";
 
+
 const loginSchema = z.object({
   username: z.string().min(3, {
     message: "Имя пользователя должно содержать минимум 3 символа",

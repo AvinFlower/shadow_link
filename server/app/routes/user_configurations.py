@@ -15,7 +15,7 @@ from app.utils.vps_data import (
     count_users_on_port,
     get_vps_clients_configurations
 )
-import uuid, os
+import uuid, os, base64
 
 
 user_configurations_bp = Blueprint('user_configurations', __name__, url_prefix='/api')
@@ -52,21 +52,21 @@ def create_configuration(user_id):
     ssh_password = selected.ssh_password
 
     # Параметры
-    unique_email = f"Unknown_Soldier_{user_id}"
-    client_uuid = str(uuid.uuid4())
+    email = f"Unknown_Soldier_{user_id}_{str(uuid.uuid4())[:8]}"
+    client_uuid = base64.urlsafe_b64encode(uuid.uuid4().bytes).rstrip(b'=').decode('ascii')
     flow = os.environ["FLOW"]
 
     try:
         # 1) Добавить в inbounds + сразу получить готовый линк
         config_link = insert_inbound_record(
-                        unique_email, client_uuid,
+                        email, client_uuid,
                         host, port,
                         flow, user_id, months,
                         ssh_username, ssh_password, selected.x_ui_port
                         )
 
         # 2) Трафик
-        insert_traffic_record(unique_email, port, months, host, ssh_username, ssh_password)
+        insert_traffic_record(email, port, months, host, ssh_username, ssh_password)
 
         # 3) Перезапуск
         restart_xui(host, port, ssh_username, ssh_password)
@@ -155,7 +155,7 @@ def sync_configurations(user_id):
             # Игнорируем серверы, к которым не удалось подключиться
             continue
 
-    # Фильтр только по текущему пользователю
+    # Фильтруем только по текущему пользователю
     user_vps = [c for c in vps_entries if c.get('user_id') == user_id]
     vps_uuids = {c.get('id') for c in user_vps}
 
@@ -163,11 +163,21 @@ def sync_configurations(user_id):
     new_uuids = vps_uuids - local_uuids
     removed_uuids = local_uuids - vps_uuids
 
+    # response_data = {
+    #     "local_configs": [{"UUID": cfg.client_uuid, "Expiration": cfg.expiration_date, "Config Link": cfg.config_link} for cfg in local_configs],
+    #     "vps_configs": [{"UUID": entry.get('id'), "Server ID": entry.get('server_id'), "Expiry Time": entry.get('expiryTime')} for entry in vps_entries],
+    #     "new_uuids": list(new_uuids),
+    #     "removed_uuids": list(removed_uuids)
+    # }
+
     try:
-        # Добавляем новые конфигурации
+        # Обновляем конфигурации
         for entry in user_vps:
             client_uuid = entry.get('id')
+            existing_config = next((cfg for cfg in local_configs if cfg.client_uuid == client_uuid), None)
+
             if client_uuid in new_uuids:
+                # Если конфигурация новая, добавляем её
                 exp_ms = entry.get('expiryTime')
                 exp_date = datetime.fromtimestamp(exp_ms / 1000, tz=timezone.utc)
                 new_config = UserConfiguration(
@@ -179,6 +189,13 @@ def sync_configurations(user_id):
                     months=entry.get('months', 0)
                 )
                 db.session.add(new_config)
+            elif existing_config:
+                # Если конфигурация существует, обновляем её
+                existing_config.config_link = entry.get('link')
+                exp_ms = entry.get('expiryTime')
+                exp_date = datetime.fromtimestamp(exp_ms / 1000, tz=timezone.utc)
+                existing_config.expiration_date = exp_date
+                existing_config.months = entry.get('months', 0)
 
         # Удаляем устаревшие конфигурации
         for cfg in local_configs:
@@ -186,7 +203,15 @@ def sync_configurations(user_id):
                 db.session.delete(cfg)
 
         db.session.commit()
-        return jsonify({"message": "Configurations synchronized successfully"}), 200
+
+        # Добавляем финальные данные после синхронизации
+        all_configs = UserConfiguration.query.filter_by(user_id=user_id).all()
+        # response_data["final_configs"] = [{"UUID": cfg.client_uuid, "Expiration": cfg.expiration_date, "Config Link": cfg.config_link} for cfg in all_configs]
+
+        return jsonify({
+            "message": "Configurations synchronized successfully",
+            # "data": response_data
+            }), 200
 
     except Exception as e:
         db.session.rollback()

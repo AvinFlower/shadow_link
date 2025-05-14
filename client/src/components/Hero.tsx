@@ -21,7 +21,7 @@ const Hero: React.FC<{ scrollToFeatures: React.RefObject<HTMLDivElement> }> = ({
               className="text-4xl md:text-5xl lg:text-6xl font-bold mb-6"
             >
               Защищённые и анонимные<br/>
-              <span className="text-primary">Прокс-сервисы</span>
+              <span className="text-primary">Прокси-сервисы</span>
             </motion.h1>
             
             <motion.p 

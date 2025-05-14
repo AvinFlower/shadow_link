@@ -79,8 +79,7 @@ def insert_traffic_record(
     ssh = ssh_connect(host, port, ssh_username, ssh_password)
     try:
         db_path = "/etc/x-ui/x-ui.db"
-        expiry_ms = int((datetime.now(timezone.utc) + relativedelta(months=months))
-                        .timestamp() * 1000)
+        expiry_ms = int((datetime.now(timezone.utc) + relativedelta(months=months)).timestamp() * 1000)
         sql = (
             "INSERT INTO client_traffics "
             "(inbound_id, enable, email, up, down, expiry_time, total, reset) VALUES ("

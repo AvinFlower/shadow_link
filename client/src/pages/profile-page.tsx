@@ -1,3 +1,4 @@
+// ----------------- ИМПОРТЫ -----------------
 import React, { useState, useMemo, useEffect } from "react";
 import { Popover, PopoverTrigger, PopoverContent } from "@/components/ui/popover";
 import { z } from "zod";
@@ -9,43 +10,17 @@ import { useMutation, useQuery } from "@tanstack/react-query";
 import { getQueryFn } from "@/lib/queryClient";
 import { Button } from "@/components/ui/button";
 import { AiOutlineCopy } from 'react-icons/ai';
-import { ProxyCard } from "@/components/ProxyCard"; // Путь к файлу, где определен ProxyCard
-
-import { GetConfigResponse } from "@/hooks/use-auth"; // Путь к файлу с типами, где определён GetConfigResponse
-import {
-  Form,
-  FormControl,
-  FormField,
-  FormItem,
-  FormLabel,
-  FormMessage,
-} from "@/components/ui/form";
+import { ProxyCard } from "@/components/ProxyCard";
+import { GetConfigResponse } from "@/hooks/use-auth";
+import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { Input } from "@/components/ui/input";
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardFooter,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card";
-import {
-  Tabs,
-  TabsContent,
-  TabsList,
-  TabsTrigger,
-} from "@/components/ui/tabs";
-import {
-  Loader2,
-  User,
-  Shield,
-  CreditCard,
-  Globe,
-  Server,
-} from "lucide-react";
+import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Loader2, User, Shield, CreditCard, Globe, Server } from "lucide-react";
 import { motion } from "framer-motion";
+import { useToast } from "@/hooks/use-toast";
 
-// Schemas
+// ----------------- СХЕМЫ -----------------
 const profileSchema = z.object({
   username: z.string().min(2),
   email: z.string().email(),
@@ -55,161 +30,168 @@ const profileSchema = z.object({
   message: "Для смены пароля введите текущий пароль",
   path: ["currentPassword"],
 });
-
 type ProfileValues = z.infer<typeof profileSchema>;
 
 const proxyPurchaseSchema = z.object({
-  country: z.enum(["us", "uk", "de", "ru"]),
-  duration: z.coerce.number().min(1),
-  price: z.string(),
+  country: z.enum(["Russia","Poland","USA","UK","Denmark"]),
+  months: z.coerce.number().min(1),
+  price: z.number(),               // Если что потом удалить
 });
-
 type ProxyPurchaseValues = z.infer<typeof proxyPurchaseSchema>;
 
-type PurchaseVars = { country: string; duration: number; amount: number };
+const basePrices: Record<ProxyPurchaseValues["country"], number> = {
+  Russia: 200,
+  Poland: 200,
+  USA: 200,
+  UK: 200,
+  Denmark: 200,
+};
 
+type PurchaseVars = { country: string; duration: number; amount: number };
 type TabKey = "profile" | "credits" | "proxies";
 
-
-
-
-
+// ----------------- КОМПОНЕНТ -----------------
 export default function ProfilePage() {
-  const { user, updateProfileMutation } = useAuth();
-  const { createConfigMutation } = useAuth();
+  // -------------- Авторизация и мутации --------------
+  const { user, updateProfileMutation, createConfigMutation } = useAuth();
+
+  // -------------- Состояния --------------
   const [activeTab, setActiveTab] = useState<TabKey>("profile");
   const [paymentMethod, setPaymentMethod] = useState<"card"|"wallet"|"crypto">("card");
   const [proxyFilter, setProxyFilter] = useState<"all"|"active"|"expired">("all");
   const [profileData, setProfileData] = useState<ProfileValues>({
     username: user?.username || "",
     email: user?.email || "",
-  })
-  const [username, setUsername] = useState(user?.username || ""); // Добавляем состояние для имени
+  });
+  const [username, setUsername] = useState(user?.username || "");
   const [notification, setNotification] = useState<string | null>(null);
 
-  useEffect(() => {
-    // При загрузке страницы проверяем, есть ли флаг об успешном обновлении в sessionStorage
-    const storedNotification = sessionStorage.getItem("profileUpdateNotification");
-    if (storedNotification) {
-      setNotification(storedNotification);
-      // Удаляем уведомление из sessionStorage, чтобы не показывать его снова
-      sessionStorage.removeItem("profileUpdateNotification");
-    }
-  }, []);
-
+  // -------------- Запрос конфигураций --------------
   const { data: configs, isLoading: configsLoading, error: configsError } = useQuery<GetConfigResponse>({
     queryKey: ["configurations", user?.id],
     queryFn: async () => {
       if (!user) throw new Error("Неавторизован");
-  
-      const token = localStorage.getItem('access_token'); // Получаем токен из localStorage
-  
+      const token = localStorage.getItem('access_token');
       const res = await fetch(
-        `http://localhost:4000/api/users/${user.id}/configurations`,
+        `http://localhost:4000/api/users/configurations/${user.id}`,
         {
           method: "GET",
           credentials: "include",
-          headers: {
-            "Content-Type": "application/json",
-            "Authorization": `Bearer ${token}`,  // Добавляем токен в заголовок
-          },
+          headers: { "Content-Type": "application/json", "Authorization": `Bearer ${token}` },
         }
       );
-  
       if (!res.ok) {
-        const t = await res.text();
-        console.error("API error:", t);
+        const t = await res.text(); console.error("API error:", t);
         throw new Error(`Ошибка ${res.status}`);
       }
-  
       const payload = await res.json();
       return Array.isArray(payload) ? payload : [payload] as GetConfigResponse;
     },
     enabled: !!user,
   });
 
-  // function onPurchaseSubmit(data: ProxyPurchaseValues) {
-  //   createConfigMutation.mutate(data);
-  // }
-  function onPurchaseSubmit() {
-    createConfigMutation.mutate();
-  }
-
-  // Формы
+  // -------------- Формы --------------
   const profileForm = useForm<ProfileValues>({
     resolver: zodResolver(profileSchema),
-    defaultValues: profileData, // Используем данные из стейта
+    defaultValues: profileData,
   });
   const purchaseForm = useForm<ProxyPurchaseValues>({
     resolver: zodResolver(proxyPurchaseSchema),
-    defaultValues: { country: "us", duration: 1, price: "0.00" },
+    defaultValues: { country: "Russia", months: 1, price: basePrices["Russia"] * 1 },
   });
 
-  // Расчёт цены
-  const computedPrice = useMemo(() => {
-    const { country, duration } = purchaseForm.getValues();
-    // базовая стоимость за 1 месяц (в долларах)
-    const base = 5;
+  // -------------- Константы прокси --------------
+  const countryOptions: { value: ProxyPurchaseValues["country"]; label: string; price: number }[] = [
+    { value: "Russia", label: "Россия", price: 250 },
+    { value: "Poland", label: "Польша", price: 300 },
+    { value: "USA", label: "США", price: 400 },
+    { value: "UK", label: "Великобритания", price: 380 },
+    { value: "Denmark", label: "Германия", price: 360 },
+  ];
 
-    // поправка на страну
-    const multipliers: Record<string, number> = {
-      us: 1,
-      uk: 1.2,
-      de: 1.1,
-      ru: 0.8,
-    };
-    return (base * (multipliers[country] || 1) * duration).toFixed(2);
-  }, [purchaseForm.watch("country"), purchaseForm.watch("duration")]);
+  // -------------- Вычисление цены --------------
+  const watchedCountry = purchaseForm.watch("country");
+  const watchedMonths = purchaseForm.watch("months");
+  const computedPrice = useMemo(() => {
+    return basePrices[watchedCountry] * watchedMonths;
+  }, [watchedCountry, watchedMonths]);
+
+  // -------------- Обработчики --------------
+  function onPurchaseSubmit(data: ProxyPurchaseValues) {
+    createConfigMutation.mutate({ country: data.country, months: data.months });
+  }
+
+  const { toast } = useToast();
+  function onProfileSubmit(data: ProfileValues) {
+    if (!user?.id) return;
+    const { currentPassword, newPassword, ...pd } = data;
+    const token = localStorage.getItem('access_token');
+    
+    // Отправляем уведомление сразу после начала мутации, чтобы сообщить пользователю о начале изменения
+    let changes: string[] = [];
+    
+    if (pd.username !== user.username) {
+      changes.push("имя пользователя");
+    }
+    if (pd.email !== user.email) {
+      changes.push("email");
+    }
+    
+    if (changes.length > 0) {
+      setNotification(`Вы изменили: ${changes.join(", ")}`);
+    }
+    
+    updateProfileMutation.mutate(
+      { id: user.id, ...pd, ...(newPassword && currentPassword ? { currentPassword, newPassword } : {}) },
+      {
+        onSuccess: updated => {
+          setProfileData({ username: updated.username, email: updated.email });
+          setUsername(updated.username); // Обновляем username
+          sessionStorage.setItem("profileUpdateNotification", "Профиль успешно обновлён");
+          setActiveTab("profile");
+  
+          // После успешного обновления отправляем уведомление
+          const successChanges = [];
+          if (updated.username !== user.username) successChanges.push("имя пользователя");
+          if (updated.email !== user.email) successChanges.push("email");
+  
+          if (successChanges.length > 0) {
+            toast({
+              title: "Изменения применены",
+              description: `Изменено: ${successChanges.join(", ")}`,
+              variant: "default",
+            });
+          }
+        }
+      }
+    );
+  }
+
+  // -------------- Эффекты --------------
+  // Синхронизация profileData и username при изменении user
+  useEffect(() => {
+    setProfileData({ username: user?.username || "", email: user?.email || "" });
+    setUsername(user?.username || "");
+  }, [user]);
+
+  // Уведомления
+  useEffect(() => {
+    const profileUpdateNotification = sessionStorage.getItem("profileUpdateNotification");
+    if (profileUpdateNotification) {
+      setNotification(profileUpdateNotification);  // Сохранить уведомление в состоянии
+      sessionStorage.removeItem("profileUpdateNotification");  // Удалить уведомление из sessionStorage
+    }
+  }, []);
 
   useEffect(() => {
     purchaseForm.setValue("price", computedPrice);
   }, [computedPrice]);
 
-  // Хендлеры
-  const onProfileSubmit = (data: ProfileValues) => {
-    if (!user?.id) return;
-  
-    const { currentPassword, newPassword, ...profileData } = data;
-  
-    const token = localStorage.getItem('access_token'); // Получаем токен из localStorage
-  
-    updateProfileMutation.mutate(
-      {
-        id: user.id,
-        ...profileData,
-        ...(newPassword && currentPassword
-          ? { currentPassword, newPassword }
-          : {}),
-      },
-      {
-        onSuccess: (data) => {
-          // Обновляем локальные данные пользователя после успешного обновления
-          setProfileData({
-            username: data.username, // Обновляем имя пользователя
-            email: data.email,
-          });
+  // -------------- Фильтрация конфигов --------------
+  const activeConfigs = useMemo(() => configs?.filter(c => new Date(c.expiration_date) > new Date()) || [], [configs]);
+  const expiredConfigs = useMemo(() => configs?.filter(c => new Date(c.expiration_date) <= new Date()) || [], [configs]);
 
-          window.location.reload();
-          
-          // // Обновляем локальное состояние для имени пользователя
-          // setUsername(data.username); // Обновляем имя пользователя на экране
-        },
-        onError: (error) => {
-          console.error("Ошибка обновления профиля:", error);
-        },
-      }
-    );
-  };
-
-  // разделяем на активные и истёкшие
-  const activeConfigs  = useMemo(
-    () => configs?.filter(c => new Date(c.expiration_date) > new Date()) || [],
-    [configs]
-  );
-  const expiredConfigs = useMemo(
-    () => configs?.filter(c => new Date(c.expiration_date) <= new Date()) || [],
-    [configs]
-  );
+  // -------------- JSX РЕНДЕР ----------------
 
   return (
     <div className="container mx-auto pt-32 pb-20">
@@ -256,7 +238,7 @@ export default function ProfilePage() {
                               <User className="h-8 w-8 text-green-500" />
                             </div>
                             <div>
-                              <div className="text-xl font-bold">{username}</div> {/* Используем локальное состояние */}
+                            <div className="text-xl font-bold">{username}</div>
                               <span className="font-medium flex items-center gap-1 text-green-500">
                                 {user?.role === "admin" ? "Администратор" : "Пользователь"}
                                 <Shield className="h-4 w-4" />
@@ -489,15 +471,16 @@ export default function ProfilePage() {
                                 <FormLabel>Страна прокси</FormLabel>
                                 <FormControl>
                                   <select {...field} className="h-10 w-full rounded-md border border-input bg-black px-3 py-2 text-sm text-white shadow-sm placeholder:text-muted-foreground focus:outline-none                 focus:ring-2 focus:ring-ring focus:ring-offset-2">
-                                    <option value="us">США</option>
-                                    <option value="uk">Великобритания</option>
-                                    <option value="de">Германия</option>
-                                    <option value="ru">Россия</option>
+                                    <option value="Russia">Россия</option>
+                                    <option value="Poland">Польша</option>
+                                    <option value="USA">США</option>
+                                    <option value="UK">Великобритания</option>
+                                    <option value="Denmark">Германия</option>
                                   </select>
                                 </FormControl>
                               </FormItem>
                             )} />
-                            <FormField control={purchaseForm.control} name="duration" render={({ field }) => (
+                            <FormField control={purchaseForm.control} name="months" render={({ field }) => (
                               <FormItem>
                                 <FormLabel>Срок (месяцев)</FormLabel>
                                 <FormControl>
@@ -512,31 +495,39 @@ export default function ProfilePage() {
                             )} />
                           </div>
                           
-                          <FormField control={purchaseForm.control} name="price" render={({ field }) => (
-                            <div className="flex items-center justify-between gap-4">
-                              {/* Блок Итого */}
-                              <div className="flex items-center justify-between h-10 w-full rounded-md border border-input bg-black px-4 text-sm text-white shadow-sm">
-                                <span className="text-muted-foreground">Итого: </span>
-                                <span className="font-semibold">{purchaseForm.watch('price')} $</span>
+                          <FormField
+                            control={purchaseForm.control}
+                            name="price"
+                            render={() => (
+                              <div className="flex items-center justify-between gap-4">
+                                {/* Блок "Итого" */}
+                                <div
+                                  className="flex items-center justify-between h-10 w-full rounded-md border border-input bg-black px-4 text-sm text-white shadow-sm"
+                                  aria-label="Сумма к оплате"
+                                >
+                                  <span className="text-muted-foreground">Итого:</span>
+                                  <span className="font-semibold">{purchaseForm.watch("price")} $</span>
+                                </div>
+                            
+                                {/* Кнопка "Купить прокси" */}
+                                <Button
+                                  type="submit"
+                                  className="h-10"
+                                  disabled={createConfigMutation.status === "pending"}
+                                  aria-busy={createConfigMutation.status === "pending"}
+                                >
+                                  {createConfigMutation.status === "pending" ? (
+                                    <>
+                                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                                      Обработка...
+                                    </>
+                                  ) : (
+                                    "Купить прокси"
+                                  )}
+                                </Button>
                               </div>
-                              
-                              {/* Кнопка Купить */}
-                              <Button
-                                onClick={() => createConfigMutation.mutate()}
-                                disabled={createConfigMutation.status === "pending"}
-                                className="h-10"
-                              >
-                                {createConfigMutation.status === "pending" ? (
-                                  <>
-                                    <Loader2 className="mr-2 h-4 w-4 animate-spin" />
-                                    Обработка...
-                                  </>
-                                ) : (
-                                  "Купить прокси"
-                                )}
-                              </Button>
-                            </div>
-                          )} />
+                            )}
+                          />
                         </form>
                       </Form>
                     </div>
@@ -544,7 +535,7 @@ export default function ProfilePage() {
                 </TabsContent>
 
 
-                {/* вкладка «Мои прокси» */}
+                {/* Вкладка «Мои прокси»*/}
             <TabsContent value="proxies">
               <div className="space-y-6">
                 <div className="flex items-center gap-4">
