@@ -8,37 +8,41 @@ const Pricing: React.FC = () => {
   // Планы по месячной подписке
   const monthlyPlans = [
     {
-      title: 'Базовый',
-      price: '$9',
+      title: 'Базовый сервер',
+      price: '200₽',
       features: [
-        { name: '5 частных прокси' },
-        { name: '10 стран' },
-        { name: '1 ГБ трафика/день' },
-        { name: 'Поддержка по электронной почте' }
+        { name: '1 core' },
+        { name: '1 GB RAM' },
+        { name: '10 GB NVMe' },
+        { name: 'До 200 Mbps ∞' },
+        { name: 'Ресурсы сервера делятся на всех клиентов' },
+        { name: 'Максимум клиентов: 10' },
       ],
       popular: false
     },
     {
-      title: 'Профессиональный',
-      price: '$19',
+      title: 'Максимальный сервер',
+      price: '300₽',
       features: [
-        { name: '20 частных прокси' },
-        { name: '30 стран' },
-        { name: '5 ГБ трафика/день' },
-        { name: 'Приоритетная поддержка' },
-        { name: 'Ротация прокси' }
+        { name: '1 core' },
+        { name: '2 GB RAM' },
+        { name: '30 GB NVMe' },
+        { name: 'До 1 Gbs ∞' },
+        { name: 'Ресурсы сервера делятся на всех клиентов' },
+        { name: 'Максимум клиентов: 10' },
       ],
       popular: true
     },
     {
-      title: 'Корпоративный',
-      price: '$49',
+      title: 'Корпоративный сервер',
+      price: '500₽',
       features: [
-        { name: '100 частных прокси' },
-        { name: '50+ стран' },
-        { name: 'Неограниченный трафик' },
-        { name: 'Круглосуточная поддержка' },
-        { name: 'Продвинутые функции безопасности' }
+        { name: '1 core' },
+        { name: '2 GB RAM' },
+        { name: '30 GB NVMe' },
+        { name: 'До 1 Gbs ∞' },
+        { name: 'Выделенная часть сервера используется только вами' },
+        { name: 'Максимум клиентов: 5' },
       ],
       popular: false
     }
@@ -47,58 +51,57 @@ const Pricing: React.FC = () => {
   // Планы по годовой подписке (со скидкой)
   const yearlyPlans = [
     {
-      title: 'Базовый',
-      price: '$90',
+      title: 'Базовый сервер',
+      price: '1800₽',
       features: [
-        { name: '5 частных прокси' },
-        { name: '10 стран' },
-        { name: '1 ГБ трафика/день' },
-        { name: 'Поддержка по электронной почте' },
-        { name: '2 месяца бесплатно' }
+        { name: '1 core' },
+        { name: '1 GB RAM' },
+        { name: '10 GB NVMe' },
+        { name: 'До 200 Mbps ∞' },
+        { name: 'Ресурсы сервера делятся на всех клиентов' },
+        { name: 'Максимум клиентов: 10' },
       ],
       popular: false
     },
     {
-      title: 'Профессиональный',
-      price: '$190',
+      title: 'Максимальный сервер',
+      price: '2900₽',
       features: [
-        { name: '20 частных прокси' },
-        { name: '30 стран' },
-        { name: '5 ГБ трафика/день' },
-        { name: 'Приоритетная поддержка' },
-        { name: 'Ротация прокси' },
-        { name: '2 месяца бесплатно' }
+        { name: '1 core' },
+        { name: '2 GB RAM' },
+        { name: '30 GB NVMe' },
+        { name: 'До 1 Gbs ∞' },
+        { name: 'Ресурсы сервера делятся на всех клиентов' },
+        { name: 'Максимум клиентов: 10' },
       ],
       popular: true
     },
     {
-      title: 'Корпоративный',
-      price: '$490',
+      title: 'Корпоративный сервер',
+      price: '4500₽',
       features: [
-        { name: '100 частных прокси' },
-        { name: '50+ стран' },
-        { name: 'Неограниченный трафик' },
-        { name: 'Круглосуточная поддержка' },
-        { name: 'Продвинутые функции безопасности' },
-        { name: '2 месяца бесплатно' }
+        { name: '1 core' },
+        { name: '2 GB RAM' },
+        { name: '30 GB NVMe' },
+        { name: 'До 1 Gbs ∞' },
+        { name: 'Выделенная часть сервера используется только вами' },
+        { name: 'Максимум клиентов: 5' },
       ],
       popular: false
     }
   ];
 
-  // Сравнение функций
-  const compareFeatures = [
-    { name: 'Частные прокси', basic: '5', pro: '20', enterprise: '100' },
-    { name: 'Страны', basic: '10', pro: '30', enterprise: '50+' },
-    { name: 'Трафик', basic: '1 ГБ/день', pro: '5 ГБ/день', enterprise: 'Неограниченно' },
-    { name: 'Поддержка', basic: 'Электронная почта', pro: 'Приоритетная', enterprise: 'Круглосуточная' },
-    { name: 'Ротация прокси', basic: false, pro: true, enterprise: true },
-    { name: 'API доступ', basic: false, pro: true, enterprise: true },
-    { name: 'Выделенные IP-адреса', basic: false, pro: true, enterprise: true },
-    { name: 'Аутентификация по IP', basic: true, pro: true, enterprise: true },
-    { name: 'Несколько подсетей', basic: false, pro: true, enterprise: true },
-    { name: 'Продвинутая безопасность', basic: false, pro: false, enterprise: true }
+    // Сравнение функций
+    const compareFeatures = [
+    { name: 'CPU', basicServer: '1 core', maxServer: '1 core', corpServer: '1 core' },
+    { name: 'ОЗУ', basicServer: '1 GB RAM', maxServer: '2 GB RAM', corpServer: '2 GB RAM' },
+    { name: 'Диск', basicServer: '10 GB NVMe', maxServer: '30 GB NVMe', corpServer: '30 GB NVMe' },
+    { name: 'Скорость', basicServer: 'До 200 Mbps ∞', maxServer: 'До 1 Gbs ∞', corpServer: 'До 1 Gbs ∞' },
+    { name: 'Выделенность ресурсов', basicServer: false, maxServer: false, corpServer: true },
+    { name: 'Макс. клиентов на сервер', basicServer: '10', maxServer: '10', corpServer: '5' }
   ];
+
+
 
   return (
     <div className="pt-32 pb-20">
@@ -168,9 +171,9 @@ const Pricing: React.FC = () => {
               <thead>
                 <tr className="border-b border-border">
                   <th className="py-4 px-6 text-left">Особенности</th>
-                  <th className="py-4 px-6 text-center">Базовый</th>
-                  <th className="py-4 px-6 text-center">Профессиональный</th>
-                  <th className="py-4 px-6 text-center">Корпоративный</th>
+                  <th className="py-4 px-6 text-center">Базовый сервер</th>
+                  <th className="py-4 px-6 text-center">Максимальный сервер</th>
+                  <th className="py-4 px-6 text-center">Корпоративный сервер</th>
                 </tr>
               </thead>
               <tbody>
@@ -178,21 +181,21 @@ const Pricing: React.FC = () => {
                   <tr key={index} className="border-b border-border">
                     <td className="py-4 px-6 font-medium">{feature.name}</td>
                     <td className="py-4 px-6 text-center">
-                      {typeof feature.basic === 'boolean' ? 
-                        (feature.basic ? <Check className="h-5 w-5 text-primary mx-auto" /> : <span className="text-muted-foreground">-</span>) : 
-                        feature.basic
+                      {typeof feature.basicServer === 'boolean' ? 
+                        (feature.basicServer ? <Check className="h-5 w-5 text-primary mx-auto" /> : <span className="text-muted-foreground">-</span>) : 
+                        feature.basicServer
                       }
                     </td>
                     <td className="py-4 px-6 text-center">
-                      {typeof feature.pro === 'boolean' ? 
-                        (feature.pro ? <Check className="h-5 w-5 text-primary mx-auto" /> : <span className="text-muted-foreground">-</span>) : 
-                        feature.pro
+                      {typeof feature.maxServer === 'boolean' ? 
+                        (feature.maxServer ? <Check className="h-5 w-5 text-primary mx-auto" /> : <span className="text-muted-foreground">-</span>) : 
+                        feature.maxServer
                       }
                     </td>
                     <td className="py-4 px-6 text-center">
-                      {typeof feature.enterprise === 'boolean' ? 
-                        (feature.enterprise ? <Check className="h-5 w-5 text-primary mx-auto" /> : <span className="text-muted-foreground">-</span>) : 
-                        feature.enterprise
+                      {typeof feature.corpServer === 'boolean' ? 
+                        (feature.corpServer ? <Check className="h-5 w-5 text-primary mx-auto" /> : <span className="text-muted-foreground">-</span>) : 
+                        feature.corpServer
                       }
                     </td>
                   </tr>
@@ -215,7 +218,7 @@ const Pricing: React.FC = () => {
             Свяжитесь с нашей командой продаж, чтобы обсудить ваши нужды.
           </p>
           <div className="text-primary font-semibold">
-            sales@shadowlink.com | +1 (555) 987-6543
+            sales@shadowlink.com | +7 (912) 736-6610
           </div>
         </motion.div>
       </div>

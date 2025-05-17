@@ -13,3 +13,5 @@ python-dateutil
 paramiko
 flask_jwt_extended
 dotenv
+grpcio-tools
+grpcio-reflection

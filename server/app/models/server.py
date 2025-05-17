@@ -1,4 +1,4 @@
-# app/models/server.py
+# app/models/py
 from app.extensions import db
 
 class Server(db.Model):

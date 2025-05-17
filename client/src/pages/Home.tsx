@@ -47,37 +47,41 @@ const Home: React.FC = () => {
   // Данные для секции Pricing
   const pricingPlans = [
     {
-      title: 'Базовый',
-      price: '$9',
+      title: 'Базовый сервер',
+      price: '200₽',
       features: [
-        { name: '5 приватных прокси' },
-        { name: '10 стран' },
-        { name: '1 ГБ трафика в день' },
-        { name: 'Поддержка по email' }
+        { name: '1 core' },
+        { name: '1 GB RAM' },
+        { name: '10 GB NVMe' },
+        { name: 'До 200 Mbps ∞' },
+        { name: 'Ресурсы сервера делятся на всех клиентов' },
+        { name: 'Максимум клиентов: 10' },
       ],
       popular: false
     },
     {
-      title: 'Профессиональный',
-      price: '$19',
+      title: 'Максимальный сервер',
+      price: '300₽',
       features: [
-        { name: '20 приватных прокси' },
-        { name: '30 стран' },
-        { name: '5 ГБ трафика в день' },
-        { name: 'Приоритетная поддержка' },
-        { name: 'Ротация прокси' }
+        { name: '1 core' },
+        { name: '2 GB RAM' },
+        { name: '30 GB NVMe' },
+        { name: 'До 1 Gbs ∞' },
+        { name: 'Ресурсы сервера делятся на всех клиентов' },
+        { name: 'Максимум клиентов: 10' },
       ],
       popular: true
     },
     {
-      title: 'Корпоративный',
-      price: '$49',
+      title: 'Корпоративный сервер',
+      price: '500₽',
       features: [
-        { name: '100 приватных прокси' },
-        { name: '50+ стран' },
-        { name: 'Неограниченный трафик' },
-        { name: 'Круглосуточная поддержка' },
-        { name: 'Продвинутые функции безопасности' }
+        { name: '1 core' },
+        { name: '2 GB RAM' },
+        { name: '30 GB NVMe' },
+        { name: 'До 1 Gbs ∞' },
+        { name: 'Выделенная часть сервера используется только вами' },
+        { name: 'Максимум клиентов: 5' },
       ],
       popular: false
     }
@@ -88,12 +92,12 @@ const Home: React.FC = () => {
     {
       icon: 'mail',
       title: 'Напишите нам',
-      description: 'support@shadowlink.com'
+      description: 'shadowlink@tutamail.com'
     },
     {
       icon: 'phone',
       title: 'Позвоните нам',
-      description: '+1 (555) 123-4567'
+      description: '+7 (912) 736-6610'
     },
     {
       icon: 'message-circle',

@@ -1,12 +1,12 @@
 # app/__init__.py
 from flask import Flask
-from .extensions import db, bcrypt, login_manager, cors, jwt
-from .routes.auth import auth_bp
-from .routes.users import users_bp
-from .routes.admin import admin_bp
-from .routes.servers import server_bp
-from .routes.user_configurations import user_configurations_bp
-from .models.user import User
+from app.extensions import db, bcrypt, login_manager, cors, jwt
+from app.routes.auth import auth_bp
+from app.routes.users import users_bp
+from app.routes.admin import admin_bp
+from app.routes.servers import server_bp
+from app.routes.user_configurations import user_configurations_bp
+from app.models.user import User
 
 def create_app():
     app = Flask(__name__)

@@ -1,0 +1,32 @@
+syntax = "proto3";
+package config;
+
+// Запрос на создание конфигурации
+message CreateConfigRequest {
+  int32 user_id = 1;
+  string country = 2;
+  int32 months = 3;
+}
+
+// Ответ на создание конфигурации
+message CreateConfigResponse {
+  string config_link     = 1;
+  string expiration_date = 2; // ISO-строка
+  int32  price           = 3;
+}
+
+// Запрос на синхронизацию
+message SyncConfigsRequest {
+  int32 user_id = 1;
+}
+
+// Ответ на синхронизацию
+message SyncConfigsResponse {
+  string message = 1;
+}
+
+// Описание gRPC-сервиса
+service ConfigurationService {
+  rpc CreateConfiguration (CreateConfigRequest)  returns (CreateConfigResponse);
+  rpc SyncConfigurations  (SyncConfigsRequest)   returns (SyncConfigsResponse);
+}

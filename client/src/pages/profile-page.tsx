@@ -506,7 +506,7 @@ export default function ProfilePage() {
                                   aria-label="Сумма к оплате"
                                 >
                                   <span className="text-muted-foreground">Итого:</span>
-                                  <span className="font-semibold">{purchaseForm.watch("price")} $</span>
+                                  <span className="font-semibold">{purchaseForm.watch("price")} ₽</span>
                                 </div>
                             
                                 {/* Кнопка "Купить прокси" */}

@@ -1,0 +1,77 @@
+syntax = "proto3";
+package server;
+
+// Сообщение для описания сервера
+message ServerInfo {
+  int32 id = 1;
+  string country = 2;
+  string host = 3;
+  string port = 4;
+  string ssh_username = 5;
+  string ssh_password = 6;
+  int32 max_users = 7;
+  int32 x_ui_port = 8;
+}
+
+// Запрос на получение списка серверов (можно добавить фильтры при необходимости)
+message ListServersRequest {
+  // Например, фильтр по стране (опционально)
+  string country = 1;
+}
+
+// Ответ со списком серверов
+message ListServersResponse {
+  repeated ServerInfo servers = 1;
+}
+
+// Запрос на создание сервера
+message CreateServerRequest {
+  string country = 1;
+  string host = 2;
+  string port = 3;
+  string ssh_username = 4;
+  string ssh_password = 5;
+  int32 max_users = 6;
+  int32 x_ui_port = 7;
+}
+
+// Ответ на создание сервера — обычно возвращает id и успех операции
+message CreateServerResponse {
+  int32 id = 1;
+  string message = 2;
+}
+
+// Запрос на обновление сервера по id
+message UpdateServerRequest {
+  int32 id = 1;
+  string country = 2;
+  string host = 3;
+  string port = 4;
+  string ssh_username = 5;
+  string ssh_password = 6;
+  int32 max_users = 7;
+  int32 x_ui_port = 8;
+}
+
+// Ответ на обновление
+message UpdateServerResponse {
+  string message = 1;
+}
+
+// Запрос на удаление сервера
+message DeleteServerRequest {
+  int32 id = 1;
+}
+
+// Ответ на удаление
+message DeleteServerResponse {
+  string message = 1;
+}
+
+// Описание gRPC сервиса для управления серверами
+service ServerService {
+  rpc ListServers (ListServersRequest) returns (ListServersResponse);
+  rpc CreateServer (CreateServerRequest) returns (CreateServerResponse);
+  rpc UpdateServer (UpdateServerRequest) returns (UpdateServerResponse);
+  rpc DeleteServer (DeleteServerRequest) returns (DeleteServerResponse);
+}

@@ -16,86 +16,59 @@ from app.utils.vps_data import (
     get_vps_clients_configurations
 )
 import uuid, os, base64
+import grpc
+from app.generated_grpc import config_service_pb2, config_service_pb2_grpc
 
 
 user_configurations_bp = Blueprint('user_configurations', __name__, url_prefix='/api')
 
 
 # POST /api/users/<id>/configurations — создать конфигурацию (самому себе)
+import grpc
+from app.generated_grpc import config_service_pb2, config_service_pb2_grpc
+
+user_configurations_bp = Blueprint('user_configurations', __name__, url_prefix='/api')
+
 @user_configurations_bp.route('/users/configurations/<int:user_id>', methods=['POST'])
-# @jwt_required()
+@jwt_required()
 def create_configuration(user_id):
     data = request.get_json()
     country = data.get('country')
-    months = int(data.get('months'))
-    price_map = {1: 100, 3: 250, 6: 500, 12: 1000}
-    price = price_map.get(months)
-    
-    if not country or price is None:
+    months = data.get('months')
+
+    if not country or months not in (1, 3, 6, 12):
         return jsonify(error="Неверные входные данные"), 400
 
-    # Выбор свободного сервера по стране
-    servers = Server.query.filter_by(country=country).all()
-    selected = None
-    for srv in servers:
-        if srv.max_users is not None and count_users_on_port(srv.host, srv.port, srv.ssh_username, srv.ssh_password) < srv.max_users:
-            selected = srv
-            break
-
-    if not selected:
-        return jsonify(error="Нет свободных серверов для этой страны"), 400
-
-    # Извлечение SSH-данных из выбранного сервера
-    host = selected.host
-    port = selected.port
-    ssh_username = selected.ssh_username
-    ssh_password = selected.ssh_password
-
-    # Параметры
-    email = f"Unknown_Soldier_{user_id}_{str(uuid.uuid4())[:8]}"
-    client_uuid = base64.urlsafe_b64encode(uuid.uuid4().bytes).rstrip(b'=').decode('ascii')
-    flow = os.environ["FLOW"]
-
     try:
-        # 1) Добавить в inbounds + сразу получить готовый линк
-        config_link = insert_inbound_record(
-                        email, client_uuid,
-                        host, port,
-                        flow, user_id, months,
-                        ssh_username, ssh_password, selected.x_ui_port
-                        )
+        # Создаем канал и stub
+        channel = grpc.insecure_channel('grpc_config:50052')
+        stub = config_service_pb2_grpc.ConfigurationServiceStub(channel)
 
-        # 2) Трафик
-        insert_traffic_record(email, port, months, host, ssh_username, ssh_password)
-
-        # 3) Перезапуск
-        restart_xui(host, port, ssh_username, ssh_password)
-
-        # 4) Количество пользователей
-        count = count_users_on_port(host, port, ssh_username, ssh_password)
-
-        # 5) Сохранение в БД
-        config = UserConfiguration(
+        # Формируем gRPC запрос
+        grpc_request = config_service_pb2.CreateConfigRequest(
             user_id=user_id,
-            server_id=selected.id,
-            client_uuid=client_uuid,
-            config_link=config_link,
-            expiration_date=datetime.utcnow() + timedelta(days=30 * months),
+            country=country,
             months=months
         )
-        db.session.add(config)
-        db.session.commit()
 
+        # Вызываем gRPC метод
+        grpc_response = stub.CreateConfiguration(grpc_request)
+
+        if grpc_response.config_link == "":
+            # Если пустая ссылка — значит что-то не так (gRPC вернул ошибку)
+            return jsonify(error="Ошибка при создании конфигурации"), 500
+
+        # Возвращаем успешный ответ
         return jsonify(
-            config_link=config_link,
-            expiration_date=config.expiration_date.isoformat(),
-            country=country,
-            price=price
+            config_link=grpc_response.config_link,
+            expiration_date=grpc_response.expiration_date,
+            price=grpc_response.price
         ), 201
 
-    except Exception as e:
-        db.session.rollback()
-        return jsonify(error=str(e)), 500
+    except grpc.RpcError as e:
+        # Обработка ошибок gRPC
+        return jsonify(error=f"gRPC ошибка: {e.details()}"), 500
+
 
 
 # GET /api/users/<id>/configurations — список конфигураций (самому себе)
