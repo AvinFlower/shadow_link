@@ -6,6 +6,8 @@ from app.models.user import User
 from app.models.server import Server
 from app.utils.insert_servers import insert_servers
 
+from app.generated_grpc import server_service_pb2, server_service_pb2_grpc
+import grpc
 
 
 server_bp = Blueprint('servers', __name__, url_prefix='/api')
@@ -15,20 +17,46 @@ server_bp = Blueprint('servers', __name__, url_prefix='/api')
 @server_bp.route('/servers', methods=['GET'])
 @jwt_required()
 def get_servers():
+    # Проверка прав администратора
     current_user_id = int(get_jwt_identity())
     current = User.query.get(current_user_id)
     if not current or current.role != 'admin':
-       return jsonify({'message': 'Access denied'}), 403
-    
-    servers = Server.query.all()
-    return jsonify([{
-        "id": s.id,
-        "country": s.country,
-        "ip": s.ip,
-        "port": s.port,
-        "username": s.username,
-        "password": s.password
-    } for s in servers]), 200
+        return jsonify({'message': 'Access denied'}), 403
+
+    # Опциональный фильтр по стране
+    country = request.args.get('country', '')
+
+    # Создаём gRPC-канал и stub
+    channel = grpc.insecure_channel('grpc_server:50051')
+    stub = server_service_pb2_grpc.ServerServiceStub(channel)
+    grpc_req = server_service_pb2.ListServersRequest(country=country)
+
+    try:
+        grpc_res = stub.ListServers(grpc_req)
+        result = [
+            {
+                "id": int(s.id),
+                "country": s.country,
+                "host": s.host,
+                "port": int(s.port),
+                "ssh_username": s.ssh_username,
+                "ssh_password": s.ssh_password,
+                "max_users": int(s.max_users),
+                "x_ui_port": int(s.x_ui_port)
+            }
+            for s in grpc_res.servers
+        ]
+        return jsonify(result), 200
+
+    except grpc.RpcError as e:
+        status = e.code()
+        msg = e.details() or 'gRPC error'
+        http_code = 500
+        if status == grpc.StatusCode.UNAUTHENTICATED:
+            http_code = 401
+        elif status == grpc.StatusCode.PERMISSION_DENIED:
+            http_code = 403
+        return jsonify(error=msg), http_code
 
 # POST /api/servers — создать новый сервер (только админ)
 @server_bp.route('/servers/import-from-env', methods=['POST'])
