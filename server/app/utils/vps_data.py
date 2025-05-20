@@ -32,15 +32,6 @@ def ssh_connect(host: str, port: int, ssh_username: str, ssh_password: str) -> p
 def get_redis_key(host: str, port: int) -> str:
     return f"vps:users:{host}:{port}"
 
-# def update_user_count_cache(self, host: str, port: int, ssh_username: str, ssh_password: str, ttl: int = 10):
-#     """
-#     Фоновая задача для подсчёта пользователей и записи результата в Redis с TTL.
-#     """
-#     count = count_users_on_port(host, port, ssh_username, ssh_password)
-#     redis_key = get_redis_key(host, port)
-#     redis_client.setex(redis_key, ttl, count)
-#     return count
-
 def get_cached_user_count(host: str, port: int, ssh_username: str, ssh_password: str) -> int:
     """
     Возвращает закешированное значение количества пользователей или 0.

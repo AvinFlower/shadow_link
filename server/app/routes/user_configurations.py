@@ -14,7 +14,8 @@ from app.utils.vps_data import (
     insert_traffic_record,
     restart_xui,
     count_users_on_port,
-    get_vps_clients_configurations
+    get_vps_clients_configurations,
+    get_cached_user_count
 )
 import uuid, os, base64
 import grpc
@@ -64,7 +65,30 @@ def create_configuration(user_id):
     except grpc.RpcError as e:
         # Обработка ошибок gRPC
         return jsonify(error=f"gRPC ошибка: {e.details()}"), 500
+    
+    
+# # GET /api/users/configurations/users_count — количество конфигураций
+# @user_configurations_bp.route('/users/configurations/users_count', methods=['GET'])
+# @jwt_required()
+# def users_count():
+#     """
+#     GET /api/users/configurations/users_count?host=…&port=…&username=…&password=…
+#     Возвращает количество юзеров на VPS из кэша Redis или запускает его пересчёт.
+#     """
+#     # Проверяем параметры
+#     host = request.args.get('host')
+#     port = request.args.get('port', type=int)
+#     ssh_user = request.args.get('username')
+#     ssh_pass = request.args.get('password')
 
+#     if not all([host, port, ssh_user, ssh_pass]):
+#         return jsonify(error="Missing required query params: host, port, username, password"), 400
+
+#     # (Необязательно) проверяем, что jwt_identity совпадает с каким-то ожиданием
+
+#     # Получаем либо из кэша, либо ставим задачу на пересчёт и возвращаем 0
+#     count = get_cached_user_count(host, port, ssh_user, ssh_pass)
+#     return jsonify(user_count=count), 200
 
 
 # GET /api/users/<id>/configurations — список конфигураций (самому себе)
@@ -85,7 +109,6 @@ def get_configurations(user_id):
         "expiration_date": c.expiration_date.isoformat(),
         "created_at": c.created_at.isoformat()
     } for c in configs]), 200
-
 
 
 # PUT /api/users/<id>/configurations/sync — синхронизация конфигураций с сервером

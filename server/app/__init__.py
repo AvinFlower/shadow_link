@@ -1,6 +1,6 @@
 # app/__init__.py
 from flask import Flask
-from app.extensions import db, bcrypt, login_manager, cors, jwt, init_celery
+from app.extensions import db, bcrypt, login_manager, cors, jwt
 from app.routes.auth import auth_bp
 from app.routes.users import users_bp
 from app.routes.admin import admin_bp
@@ -11,7 +11,7 @@ from app.models.user import User
 def create_app():
     app = Flask(__name__)
 
-    # Конфигурация
+    # Загрузка конфигурации
     app.config.from_object('config.Config')
 
     # Инициализация расширений
@@ -20,14 +20,13 @@ def create_app():
     login_manager.init_app(app)
     cors.init_app(app, origins=["http://localhost:3000", "http://another-frontend.com"], supports_credentials=True)
     jwt.init_app(app)
-    init_celery(app)
 
-    # Загрузка пользователя
+    # Загрузка пользователя для Flask-Login
     @login_manager.user_loader
     def load_user(user_id):
         return User.query.get(int(user_id))
 
-    # Добавление заголовков после запроса
+    # Общие заголовки CORS
     @app.after_request
     def after_request(response):
         response.headers['Access-Control-Allow-Origin'] = 'http://localhost:3000'
@@ -43,6 +42,7 @@ def create_app():
     app.register_blueprint(server_bp)
     app.register_blueprint(user_configurations_bp)
 
+    # Создание таблиц
     with app.app_context():
         db.create_all()
 

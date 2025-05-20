@@ -19,7 +19,8 @@ from app.utils.vps_data import (
     insert_traffic_record,
     restart_xui,
     count_users_on_port,
-    get_vps_clients_configurations
+    get_vps_clients_configurations,
+    get_cached_user_count
 )
 from app import create_app
 

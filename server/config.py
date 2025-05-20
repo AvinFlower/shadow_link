@@ -10,6 +10,14 @@ class Config:
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY')
     JWT_ACCESS_TOKEN_EXPIRES = 60 * 60 * 24 * 7
     
+    # Брокер сообщений
+    BROKER_URL       = os.environ.get('REDIS_URL')
+    RESULT_BACKEND   = os.environ.get('REDIS_URL')
+    RESULT_EXPIRES   = 3600   # TTL для результатов
+
+    # (Опционально)
+    TASK_IGNORE_RESULT = False
+    
 class DevelopmentConfig(Config):
     DEBUG = True
 

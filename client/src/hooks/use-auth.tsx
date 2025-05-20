@@ -287,22 +287,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         if (!user) throw new Error("Пользователь не найден");
         const token = localStorage.getItem("access_token");
         if (!token) throw new Error("Необходим токен для авторизации");
-  
-        // const res = await apiRequest(
-        //   "POST",
-        //   `http://localhost:4000/api/users/configurations/${user.id}`,
-        //   {
-        //     headers: {
-        //       "Authorization": `Bearer ${token}`,
-        //       "Content-Type": "application/json",
-        //     },
-        //     credentials: "include",
-        //     body: JSON.stringify({
-        //       country,
-        //       months: months,   // бэкенд ожидает поле months
-        //     }),
-        //   }
-        // );
+        
         const res = await apiRequest(
           "POST",
           `http://localhost:4000/api/users/configurations/${user.id}`,

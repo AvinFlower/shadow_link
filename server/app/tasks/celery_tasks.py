@@ -1,25 +1,45 @@
-# F:\Education\OOP\shadow_link\server\app\tasks\celery_tasks.py
 from app.extensions import celery
-import os
+from app.models.server import Server
 import redis
 from dotenv import load_dotenv
+import os
+from celery.schedules import crontab
 
+# Загрузка переменных окружения
 load_dotenv()
-
 redis_client = redis.Redis.from_url(os.getenv('REDIS_URL'))
 
 @celery.task(bind=True)
-def update_user_count_cache(self, host: str, port: int, ssh_username: str, ssh_password: str, ttl: int = 60):
-    """
-    Подключаемся по SSH, считаем юзеров, пишем в Redis с TTL.
-    """
+def update_user_count_cache(self, host, port, ssh_username, ssh_password, ttl=60):
     from app.utils.vps_data import count_users_on_port
-
-    cache_key = f"vps:users:{host}:{port}"
     try:
         count = count_users_on_port(host, port, ssh_username, ssh_password)
-        redis_client.set(cache_key, count, ex=ttl)
+        redis_client.set(f"vps:users:{host}:{port}", count, ex=ttl)
         return count
     except Exception as e:
         self.retry(exc=e, countdown=10, max_retries=3)
-        return None
+
+# Снимаем bind=True, больше не нужен self
+@celery.task
+def update_all_vps_user_counts():
+    """
+    Получаем все VPS-серверы из базы и запускаем обновление кэша для каждого.
+    Выполняется уже внутри Flask-контекста благодаря ContextTask.
+    """
+    try:
+        servers = Server.query.all()
+    except Exception as e:
+        print(f"[ERROR] Failed to fetch servers from DB: {e}", flush=True)
+        return
+
+    for srv in servers:
+        update_user_count_cache.delay(
+            srv.host, srv.port, srv.ssh_username, srv.ssh_password
+        )
+
+@celery.on_after_configure.connect
+def setup_periodic_tasks(sender, **kwargs):
+    sender.add_periodic_task(
+        crontab(minute='*/1'),
+        update_all_vps_user_counts.s()
+    )
