@@ -1,6 +1,6 @@
 # app/__init__.py
 from flask import Flask
-from app.extensions import db, bcrypt, login_manager, cors, jwt
+from app.extensions import db, bcrypt, login_manager, cors, jwt, init_celery
 from app.routes.auth import auth_bp
 from app.routes.users import users_bp
 from app.routes.admin import admin_bp
@@ -20,6 +20,7 @@ def create_app():
     login_manager.init_app(app)
     cors.init_app(app, origins=["http://localhost:3000", "http://another-frontend.com"], supports_credentials=True)
     jwt.init_app(app)
+    init_celery(app)
 
     # Загрузка пользователя
     @login_manager.user_loader

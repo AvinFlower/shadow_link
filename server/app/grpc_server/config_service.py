@@ -1,6 +1,8 @@
+# F:\Education\OOP\shadow_link\server\app\grpc_server\config_service.py
 import grpc
 from concurrent import futures
-from datetime import datetime, timedelta, timezone
+from datetime import datetime, timezone
+from dateutil.relativedelta import relativedelta
 import uuid
 import base64
 import os
@@ -36,7 +38,7 @@ class ConfigurationServiceServicer(config_service_pb2_grpc.ConfigurationServiceS
             servers = Server.query.filter_by(country=request.country).all()
             selected = next(
                 (s for s in servers
-                 if count_users_on_port(s.host, s.port, s.ssh_username, s.ssh_password) < s.max_users),
+                 if get_cached_user_count(s.host, s.port, s.ssh_username, s.ssh_password) < s.max_users),
                 None
             )
             if not selected:
@@ -65,7 +67,7 @@ class ConfigurationServiceServicer(config_service_pb2_grpc.ConfigurationServiceS
                             selected.ssh_username, selected.ssh_password)
 
                 # Шаг 4: сохранить в БД
-                exp = datetime.now(timezone.utc) + timedelta(days=30 * request.months) #Maybe Error
+                exp = datetime.now(timezone.utc) + relativedelta(months=request.months)
                 cfg = UserConfiguration(
                     user_id=request.user_id,
                     server_id=selected.id,

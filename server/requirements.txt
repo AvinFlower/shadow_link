@@ -15,3 +15,5 @@ flask_jwt_extended
 dotenv
 grpcio-tools
 grpcio-reflection
+celery
+redis

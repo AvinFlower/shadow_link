@@ -9,6 +9,10 @@ from dotenv import load_dotenv
 import os
 import uuid as _uuid
 from urllib.parse import quote
+from celery import Celery
+from app.extensions import celery
+import redis
+from app.tasks.celery_tasks import update_user_count_cache
 
 # Загрузка переменных окружения (PUBLIC_KEY, DOMAIN)
 load_dotenv()
@@ -16,48 +20,74 @@ load_dotenv()
 # Получение значений переменных
 public_key = os.getenv('PUBLIC_KEY')
 domain = os.getenv('DOMAIN')
-
-def count_users_on_port(
-    host: str, 
-    port: int, 
-    ssh_ssh_username: str, 
-    ssh_ssh_password: str,
-) -> int:
-    # Подключаемся по SSH через нужный порт
-    ssh = ssh_connect(host, port, ssh_ssh_username, ssh_ssh_password)
-    
-    try:
-        # Путь к базе данных
-        db_path = "/etc/x-ui/x-ui.db"
-        
-        # Команда для извлечения данных из таблицы inbounds
-        cmd = f"sqlite3 {db_path} \"SELECT settings FROM inbounds;\""
-        stdin, stdout, stderr = ssh.exec_command(cmd)
-        out = stdout.read().decode().strip()
-        if not out:
-            raise RuntimeError(f"Inbound на сервере {host} не найден")
-
-        # Парсим настройки из результата
-        try:
-            cfg = json.loads(out)
-            clients = cfg.get('clients', [])
-            return len(clients)
-        except json.JSONDecodeError as e:
-            print(f"Ошибка при декодировании JSON: {e}")
-            return 0
-
-    except Exception as e:
-        print(f"Ошибка при выполнении команды: {e}")
-        return 0
-    finally:
-        ssh.close()
-
+# Redis клиент для кеша
+redis_client = redis.Redis.from_url(os.getenv("REDIS_URL"))
 
 def ssh_connect(host: str, port: int, ssh_username: str, ssh_password: str) -> paramiko.SSHClient:
     ssh = paramiko.SSHClient()
     ssh.set_missing_host_key_policy(paramiko.AutoAddPolicy())
     ssh.connect(host, port=port, username=ssh_username, password=ssh_password)
     return ssh
+
+def get_redis_key(host: str, port: int) -> str:
+    return f"vps:users:{host}:{port}"
+
+# def update_user_count_cache(self, host: str, port: int, ssh_username: str, ssh_password: str, ttl: int = 10):
+#     """
+#     Фоновая задача для подсчёта пользователей и записи результата в Redis с TTL.
+#     """
+#     count = count_users_on_port(host, port, ssh_username, ssh_password)
+#     redis_key = get_redis_key(host, port)
+#     redis_client.setex(redis_key, ttl, count)
+#     return count
+
+def get_cached_user_count(host: str, port: int, ssh_username: str, ssh_password: str) -> int:
+    """
+    Возвращает закешированное значение количества пользователей или 0.
+    Запускает обновление кеша асинхронно, если данных нет.
+    """
+    redis_key = f"vps:users:{host}:{port}"
+    cached = redis_client.get(redis_key)
+    if cached:
+        try:
+            return int(cached)
+        except ValueError:
+            pass
+    # Запускаем обновление в фоне
+    update_user_count_cache.delay(host, port, ssh_username, ssh_password)
+    return 0
+
+
+def count_users_on_port(host: str, port: int, ssh_username: str, ssh_password: str) -> int:
+    """
+    Подробный подсчёт пользователей по SSH — медленный синхронный метод.
+    """
+    ssh = None
+    try:
+        ssh = ssh_connect(host, port, ssh_username, ssh_password)
+        cmd = 'sqlite3 /etc/x-ui/x-ui.db "SELECT settings FROM inbounds;"'
+        stdin, stdout, stderr = ssh.exec_command(cmd)
+        out = stdout.read().decode().strip()
+        if not out:
+            raise RuntimeError(f"Inbound на сервере {host} не найден")
+
+        # Вот магия:
+        cfg = json.loads(out)  # парсим весь результат целиком
+        clients = cfg.get('clients', [])
+        return len(clients)
+
+    except json.JSONDecodeError as e:
+        print(f"Ошибка декодирования JSON: {e}")
+        print("RAW OUT:", repr(out))
+        return 0
+
+    except Exception as e:
+        print(f"Ошибка при выполнении команды на {host}:{port}: {e}")
+        return 0
+
+    finally:
+        if ssh:
+            ssh.close()
 
 
 def restart_xui(host: str, port: int, ssh_username: str, ssh_password: str):

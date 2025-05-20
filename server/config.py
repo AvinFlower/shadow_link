@@ -9,7 +9,7 @@ class Config:
     # Конфигурация сессий
     JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY')
     JWT_ACCESS_TOKEN_EXPIRES = 60 * 60 * 24 * 7
-
+    
 class DevelopmentConfig(Config):
     DEBUG = True
 
