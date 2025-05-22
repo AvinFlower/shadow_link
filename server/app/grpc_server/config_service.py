@@ -64,8 +64,8 @@ class ConfigurationServiceServicer(config_service_pb2_grpc.ConfigurationServiceS
                 insert_traffic_record(email, selected.port, request.months,
                                       selected.host, selected.ssh_username, selected.ssh_password)
                 # Шаг 3: перезапуск XUI
-                restart_xui(selected.host, selected.port,
-                            selected.ssh_username, selected.ssh_password)
+                # restart_xui(selected.host, selected.port,
+                #             selected.ssh_username, selected.ssh_password)
 
                 # Шаг 4: сохранить в БД
                 exp = datetime.now(timezone.utc) + relativedelta(months=request.months)
@@ -146,15 +146,14 @@ class ConfigurationServiceServicer(config_service_pb2_grpc.ConfigurationServiceS
                             client_uuid   = cuuid,
                             config_link   = entry.get('link'),
                             expiration_date = exp_date,
-                            months        = entry.get('months', 0)
+                            months        = entry.get('months')
                         )
                         db.session.add(new_cfg)
                     else:
-                        # обновляем существующую запись
                         cfg = next(cfg for cfg in local_configs if cfg.client_uuid == cuuid)
                         cfg.config_link     = entry.get('link')
                         cfg.expiration_date = exp_date
-                        cfg.months          = entry.get('months', 0)
+                        cfg.months          = entry.get('months')
 
                 # 6. Удаляем старые
                 for cfg in local_configs:
