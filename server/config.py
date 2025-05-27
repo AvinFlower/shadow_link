@@ -1,27 +1,32 @@
-import secrets
 import os
+from datetime import timedelta
 
-class Config:
-    # Конфигурация базы данных
-    SQLALCHEMY_DATABASE_URI = os.environ.get('DATABASE_URL')  # Подключение к базе данных
-    SECRET_KEY = os.environ.get('SECRET_KEY')  # Секретный ключ для безопасности приложения
+class BaseConfig:
+    # SQLAlchemy
+    SQLALCHEMY_DATABASE_URI    = os.getenv('DATABASE_URL')
+    SQLALCHEMY_TRACK_MODIFICATIONS = False  # продакшен-опция
 
-    # Конфигурация сессий
-    JWT_SECRET_KEY = os.environ.get('JWT_SECRET_KEY')
-    JWT_ACCESS_TOKEN_EXPIRES = 60 * 60 * 24 * 7
-    
-    # Брокер сообщений
-    BROKER_URL       = os.environ.get('REDIS_URL')
-    RESULT_BACKEND   = os.environ.get('REDIS_URL')
-    RESULT_EXPIRES   = 3600   # TTL для результатов
+    # Flask-сессии и JWT
+    SECRET_KEY                 = os.getenv('SECRET_KEY', os.urandom(32))
+    JWT_SECRET_KEY             = os.getenv('JWT_SECRET_KEY', SECRET_KEY)
+    JWT_ACCESS_TOKEN_EXPIRES   = timedelta(days=7)
 
-    # (Опционально)
-    TASK_IGNORE_RESULT = False
-    
-class DevelopmentConfig(Config):
-    DEBUG = True
+    # Celery
+    BROKER_URL                 = os.getenv('REDIS_URL')
+    RESULT_BACKEND             = os.getenv('REDIS_URL')
+    RESULT_EXPIRES             = 3600
+    TASK_IGNORE_RESULT         = False
 
-class ProductionConfig(Config):
-    DEBUG = False
-    # Важно добавить настройки для работы в продакшене, например:
-    SQLALCHEMY_TRACK_MODIFICATIONS = False  # Отключение отслеживания изменений в базе данных
+    # Logstash / Observability
+    LOGSTASH_HOST              = os.getenv('LOGSTASH_HOST', 'logstash')
+    LOGSTASH_PORT              = int(os.getenv('LOGSTASH_PORT', 5000))
+
+class DevelopmentConfig(BaseConfig):
+    DEBUG                      = True
+
+class ProductionConfig(BaseConfig):
+    DEBUG                      = False
+
+class Config(DevelopmentConfig):
+    """По умолчанию берем DevelopmentConfig"""
+    pass

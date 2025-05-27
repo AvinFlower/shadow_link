@@ -15,12 +15,6 @@ cors = CORS()
 jwt = JWTManager()
 celery = Celery('app')
 
-# Создание единого объекта Celery без контекста
-# celery = Celery(
-#     'app', )
-    # broker=os.getenv('REDIS_URL'),
-    # backend=os.getenv('REDIS_URL')
-# )
 
 # stub: инициализации Celery из Flask больше не требуется
 def init_celery(app):
