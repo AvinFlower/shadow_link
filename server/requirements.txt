@@ -19,3 +19,13 @@ celery
 redis
 
 structlog
+
+opentelemetry-sdk
+opentelemetry-exporter-jaeger-thrift
+opentelemetry-instrumentation-flask
+opentelemetry-instrumentation-psycopg2
+opentelemetry-instrumentation-sqlalchemy
+opentelemetry-instrumentation-redis
+opentelemetry-instrumentation-celery
+opentelemetry-exporter-prometheus
+prometheus_client
