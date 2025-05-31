@@ -24,7 +24,7 @@ _sym_db = _symbol_database.Default()
 
 
 
-DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14server_service.proto\x12\x06server\"\x97\x01\n\nServerInfo\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x0f\n\x07\x63ountry\x18\x02 \x01(\t\x12\x0c\n\x04host\x18\x03 \x01(\t\x12\x0c\n\x04port\x18\x04 \x01(\t\x12\x14\n\x0cssh_username\x18\x05 \x01(\t\x12\x14\n\x0cssh_password\x18\x06 \x01(\t\x12\x11\n\tmax_users\x18\x07 \x01(\x05\x12\x11\n\tx_ui_port\x18\x08 \x01(\x05\"%\n\x12ListServersRequest\x12\x0f\n\x07\x63ountry\x18\x01 \x01(\t\":\n\x13ListServersResponse\x12#\n\x07servers\x18\x01 \x03(\x0b\x32\x12.server.ServerInfo\"\x94\x01\n\x13\x43reateServerRequest\x12\x0f\n\x07\x63ountry\x18\x01 \x01(\t\x12\x0c\n\x04host\x18\x02 \x01(\t\x12\x0c\n\x04port\x18\x03 \x01(\t\x12\x14\n\x0cssh_username\x18\x04 \x01(\t\x12\x14\n\x0cssh_password\x18\x05 \x01(\t\x12\x11\n\tmax_users\x18\x06 \x01(\x05\x12\x11\n\tx_ui_port\x18\x07 \x01(\x05\"3\n\x14\x43reateServerResponse\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x0f\n\x07message\x18\x02 \x01(\t\"\xa0\x01\n\x13UpdateServerRequest\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x0f\n\x07\x63ountry\x18\x02 \x01(\t\x12\x0c\n\x04host\x18\x03 \x01(\t\x12\x0c\n\x04port\x18\x04 \x01(\t\x12\x14\n\x0cssh_username\x18\x05 \x01(\t\x12\x14\n\x0cssh_password\x18\x06 \x01(\t\x12\x11\n\tmax_users\x18\x07 \x01(\x05\x12\x11\n\tx_ui_port\x18\x08 \x01(\x05\"\'\n\x14UpdateServerResponse\x12\x0f\n\x07message\x18\x01 \x01(\t\"!\n\x13\x44\x65leteServerRequest\x12\n\n\x02id\x18\x01 \x01(\x05\"\'\n\x14\x44\x65leteServerResponse\x12\x0f\n\x07message\x18\x01 \x01(\t2\xb8\x02\n\rServerService\x12\x46\n\x0bListServers\x12\x1a.server.ListServersRequest\x1a\x1b.server.ListServersResponse\x12I\n\x0c\x43reateServer\x12\x1b.server.CreateServerRequest\x1a\x1c.server.CreateServerResponse\x12I\n\x0cUpdateServer\x12\x1b.server.UpdateServerRequest\x1a\x1c.server.UpdateServerResponse\x12I\n\x0c\x44\x65leteServer\x12\x1b.server.DeleteServerRequest\x1a\x1c.server.DeleteServerResponseb\x06proto3')
+DESCRIPTOR = _descriptor_pool.Default().AddSerializedFile(b'\n\x14server_service.proto\x12\x06server\"\xc3\x01\n\nServerInfo\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x0f\n\x07\x63ountry\x18\x02 \x01(\t\x12\x0c\n\x04host\x18\x03 \x01(\t\x12\x0c\n\x04port\x18\x04 \x01(\t\x12\x14\n\x0cssh_username\x18\x05 \x01(\t\x12\x14\n\x0cssh_password\x18\x06 \x01(\t\x12\x11\n\tmax_users\x18\x07 \x01(\x05\x12\x11\n\tx_ui_port\x18\x08 \x01(\x05\x12\x13\n\x0busers_count\x18\t \x01(\x05\x12\x15\n\rui_panel_link\x18\n \x01(\t\"%\n\x12ListServersRequest\x12\x0f\n\x07\x63ountry\x18\x01 \x01(\t\":\n\x13ListServersResponse\x12#\n\x07servers\x18\x01 \x03(\x0b\x32\x12.server.ServerInfo\"\xab\x01\n\x13\x43reateServerRequest\x12\x0f\n\x07\x63ountry\x18\x01 \x01(\t\x12\x0c\n\x04host\x18\x02 \x01(\t\x12\x0c\n\x04port\x18\x03 \x01(\t\x12\x14\n\x0cssh_username\x18\x04 \x01(\t\x12\x14\n\x0cssh_password\x18\x05 \x01(\t\x12\x11\n\tmax_users\x18\x06 \x01(\x05\x12\x11\n\tx_ui_port\x18\x07 \x01(\x05\x12\x15\n\rui_panel_link\x18\x08 \x01(\t\"3\n\x14\x43reateServerResponse\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x0f\n\x07message\x18\x02 \x01(\t\"\xb7\x01\n\x13UpdateServerRequest\x12\n\n\x02id\x18\x01 \x01(\x05\x12\x0f\n\x07\x63ountry\x18\x02 \x01(\t\x12\x0c\n\x04host\x18\x03 \x01(\t\x12\x0c\n\x04port\x18\x04 \x01(\t\x12\x14\n\x0cssh_username\x18\x05 \x01(\t\x12\x14\n\x0cssh_password\x18\x06 \x01(\t\x12\x11\n\tmax_users\x18\x07 \x01(\x05\x12\x11\n\tx_ui_port\x18\x08 \x01(\x05\x12\x15\n\rui_panel_link\x18\t \x01(\t\"\'\n\x14UpdateServerResponse\x12\x0f\n\x07message\x18\x01 \x01(\t\"!\n\x13\x44\x65leteServerRequest\x12\n\n\x02id\x18\x01 \x01(\x05\"\'\n\x14\x44\x65leteServerResponse\x12\x0f\n\x07message\x18\x01 \x01(\t2\xb8\x02\n\rServerService\x12\x46\n\x0bListServers\x12\x1a.server.ListServersRequest\x1a\x1b.server.ListServersResponse\x12I\n\x0c\x43reateServer\x12\x1b.server.CreateServerRequest\x1a\x1c.server.CreateServerResponse\x12I\n\x0cUpdateServer\x12\x1b.server.UpdateServerRequest\x1a\x1c.server.UpdateServerResponse\x12I\n\x0c\x44\x65leteServer\x12\x1b.server.DeleteServerRequest\x1a\x1c.server.DeleteServerResponseb\x06proto3')
 
 _globals = globals()
 _builder.BuildMessageAndEnumDescriptors(DESCRIPTOR, _globals)
@@ -32,23 +32,23 @@ _builder.BuildTopDescriptorsAndMessages(DESCRIPTOR, 'server_service_pb2', _globa
 if not _descriptor._USE_C_DESCRIPTORS:
   DESCRIPTOR._loaded_options = None
   _globals['_SERVERINFO']._serialized_start=33
-  _globals['_SERVERINFO']._serialized_end=184
-  _globals['_LISTSERVERSREQUEST']._serialized_start=186
-  _globals['_LISTSERVERSREQUEST']._serialized_end=223
-  _globals['_LISTSERVERSRESPONSE']._serialized_start=225
-  _globals['_LISTSERVERSRESPONSE']._serialized_end=283
-  _globals['_CREATESERVERREQUEST']._serialized_start=286
-  _globals['_CREATESERVERREQUEST']._serialized_end=434
-  _globals['_CREATESERVERRESPONSE']._serialized_start=436
-  _globals['_CREATESERVERRESPONSE']._serialized_end=487
-  _globals['_UPDATESERVERREQUEST']._serialized_start=490
-  _globals['_UPDATESERVERREQUEST']._serialized_end=650
-  _globals['_UPDATESERVERRESPONSE']._serialized_start=652
-  _globals['_UPDATESERVERRESPONSE']._serialized_end=691
-  _globals['_DELETESERVERREQUEST']._serialized_start=693
-  _globals['_DELETESERVERREQUEST']._serialized_end=726
-  _globals['_DELETESERVERRESPONSE']._serialized_start=728
-  _globals['_DELETESERVERRESPONSE']._serialized_end=767
-  _globals['_SERVERSERVICE']._serialized_start=770
-  _globals['_SERVERSERVICE']._serialized_end=1082
+  _globals['_SERVERINFO']._serialized_end=228
+  _globals['_LISTSERVERSREQUEST']._serialized_start=230
+  _globals['_LISTSERVERSREQUEST']._serialized_end=267
+  _globals['_LISTSERVERSRESPONSE']._serialized_start=269
+  _globals['_LISTSERVERSRESPONSE']._serialized_end=327
+  _globals['_CREATESERVERREQUEST']._serialized_start=330
+  _globals['_CREATESERVERREQUEST']._serialized_end=501
+  _globals['_CREATESERVERRESPONSE']._serialized_start=503
+  _globals['_CREATESERVERRESPONSE']._serialized_end=554
+  _globals['_UPDATESERVERREQUEST']._serialized_start=557
+  _globals['_UPDATESERVERREQUEST']._serialized_end=740
+  _globals['_UPDATESERVERRESPONSE']._serialized_start=742
+  _globals['_UPDATESERVERRESPONSE']._serialized_end=781
+  _globals['_DELETESERVERREQUEST']._serialized_start=783
+  _globals['_DELETESERVERREQUEST']._serialized_end=816
+  _globals['_DELETESERVERRESPONSE']._serialized_start=818
+  _globals['_DELETESERVERRESPONSE']._serialized_end=857
+  _globals['_SERVERSERVICE']._serialized_start=860
+  _globals['_SERVERSERVICE']._serialized_end=1172
 # @@protoc_insertion_point(module_scope)

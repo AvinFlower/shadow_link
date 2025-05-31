@@ -42,7 +42,9 @@ def get_servers():
                 "ssh_username": s.ssh_username,
                 "ssh_password": s.ssh_password,
                 "max_users": int(s.max_users),
-                "x_ui_port": int(s.x_ui_port)
+                "x_ui_port": int(s.x_ui_port),
+                "users_count": int(s.users_count),
+                "ui_panel_link": s.ui_panel_link
             }
             for s in grpc_res.servers
         ]
@@ -57,6 +59,8 @@ def get_servers():
         elif status == grpc.StatusCode.PERMISSION_DENIED:
             http_code = 403
         return jsonify(error=msg), http_code
+
+
 
 # POST /api/servers — создать новый сервер (только админ)
 @server_bp.route('/servers/import-from-env', methods=['POST'])

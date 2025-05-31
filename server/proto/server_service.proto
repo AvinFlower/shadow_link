@@ -11,6 +11,8 @@ message ServerInfo {
   string ssh_password = 6;
   int32 max_users = 7;
   int32 x_ui_port = 8;
+  int32 users_count = 9;
+  string ui_panel_link = 10;
 }
 
 // Запрос на получение списка серверов (можно добавить фильтры при необходимости)
@@ -33,6 +35,7 @@ message CreateServerRequest {
   string ssh_password = 5;
   int32 max_users = 6;
   int32 x_ui_port = 7;
+  string ui_panel_link = 8;
 }
 
 // Ответ на создание сервера — обычно возвращает id и успех операции
@@ -51,6 +54,7 @@ message UpdateServerRequest {
   string ssh_password = 6;
   int32 max_users = 7;
   int32 x_ui_port = 8;
+  string ui_panel_link = 9;
 }
 
 // Ответ на обновление

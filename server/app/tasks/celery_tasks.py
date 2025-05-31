@@ -32,6 +32,7 @@ def update_all_vps_user_counts():
     Ежеминутно обновляем кеш по всем VPS.
     Контекст Flask берётся из celery_worker.ContextTask.
     """
+    print("[USERS_COUNT]", flush=True)
     try:
         servers = Server.query.all()
     except Exception as e:
@@ -46,6 +47,7 @@ def update_all_vps_user_counts():
 
 @celery.on_after_configure.connect
 def setup_periodic_tasks_counts(sender, **kwargs):
+    update_all_vps_user_counts.apply_async()
     sender.add_periodic_task(
         crontab(minute='*/1'),
         update_all_vps_user_counts.s(),
@@ -61,7 +63,7 @@ def sync_all_user_configurations():
     Каждые 3 минуты синхронизируем данные конфигураций
     с VPS для всех пользователей.
     """
-    print("[SYNC_TASK] start synchronizing all user configurations", flush=True)
+    print("[SYNC_USER_CONFIGURATIONS]", flush=True)
 
     # локальные импорты, чтобы избежать циклических зависимостей
     from app import create_app
@@ -88,6 +90,7 @@ def sync_all_user_configurations():
 
 @celery.on_after_configure.connect
 def setup_periodic_tasks_sync(sender, **kwargs):
+    sync_all_user_configurations.apply_async()
     sender.add_periodic_task(
         crontab(minute='*/3'),
         sync_all_user_configurations.s(),

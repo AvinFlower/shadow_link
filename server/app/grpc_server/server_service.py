@@ -1,6 +1,6 @@
 # F:\Education\OOP\shadow_link\server\app\grpc_server\server_service.py
 
-import grpc
+import grpc, os
 from concurrent import futures
 from grpc_reflection.v1alpha import reflection
 
@@ -8,6 +8,19 @@ from app import create_app
 from app.generated_grpc import server_service_pb2, server_service_pb2_grpc
 from app.models.server import Server
 from app.extensions import db
+
+# ─── ПОДКЛЮЧЕНИЕ REDIS «НА МЕСТЕ» ───────────────────────────────────────────────
+import redis
+from dotenv import load_dotenv
+
+load_dotenv()
+# Используем переменную окружения REDIS_URL, которую ты прописал в docker-compose.yml
+redis_client = redis.Redis.from_url(os.getenv("REDIS_URL"))
+
+# Вспомогательная функция для формирования ключа в Redis
+def _redis_key_for_server_count(server_id: int) -> str:
+    return f"server:{server_id}:active_config_count"
+# ────────────────────────────────────────────────────────────────────────────────
 
 app = create_app()
 
@@ -19,8 +32,29 @@ class ServerServiceServicer(server_service_pb2_grpc.ServerServiceServicer):
             if request.country:
                 query = query.filter_by(country=request.country)
             servers = query.all()
-            return server_service_pb2.ListServersResponse(
-                servers=[
+
+            response_servers = []
+            for s in servers:
+                # 1) Пытаемся взять значение из Redis
+                key = _redis_key_for_server_count(s.id)
+                raw = redis_client.get(key)
+                if raw is not None:
+                    try:
+                        users_count = int(raw)
+                    except ValueError:
+                        users_count = None
+                else:
+                    users_count = None
+
+                # 2) Если ключа нет или он «битый» — пересчитываем из БД и кладём в Redis
+                if users_count is None:
+                    from app.models.user_configuration import UserConfiguration as UC
+                    users_count = UC.query.filter_by(server_id=s.id).count()
+                    # Записываем в Redis с TTL = 300 секунд (5 минут)
+                    redis_client.set(key, users_count, ex=300)
+
+                # 3) Собираем ответный объект с полем users_count
+                response_servers.append(
                     server_service_pb2.ServerInfo(
                         id=s.id,
                         country=s.country,
@@ -29,10 +63,13 @@ class ServerServiceServicer(server_service_pb2_grpc.ServerServiceServicer):
                         ssh_username=s.ssh_username,
                         ssh_password=s.ssh_password,
                         max_users=s.max_users,
-                        x_ui_port=s.x_ui_port
-                    ) for s in servers
-                ]
-            )
+                        x_ui_port=s.x_ui_port,
+                        users_count=users_count,
+                        ui_panel_link=s.ui_panel_link,
+                    )
+                )
+
+            return server_service_pb2.ListServersResponse(servers=response_servers)
 
     # def CreateServer(self, request, context):
     #     srv = Server(

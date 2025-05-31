@@ -1,14 +1,21 @@
-import { createContext, ReactNode, useContext } from "react";
-import {
-  useQuery,
-  useMutation,
-  UseMutationResult,
-} from "@tanstack/react-query";
-import { insertUserSchema, User as SelectUser, InsertUser } from "@shared/schema";
-import { getQueryFn, apiRequest, queryClient } from "../lib/queryClient";
-import { useToast } from "@/hooks/use-toast";
-import { useLocation } from 'wouter';  // Импортируем useLocation
+// src/hooks/use-auth.ts
 
+import { createContext, ReactNode, useContext } from "react";
+import { useQuery, useMutation, UseMutationResult, UseQueryResult } from "@tanstack/react-query";
+import { User as SelectUser, InsertUser } from "@shared/schema";
+import { apiRequest, queryClient } from "../lib/queryClient";
+import { useToast } from "@/hooks/use-toast";
+import { useLocation } from "wouter";
+
+
+export interface Server {
+  id: number;
+  host: string;
+  country: string;
+  max_users: number;
+  users_count: number;
+  ui_panel_link: string;
+}
 
 export type CreateConfigResponse = {
   config_link: string;
@@ -47,15 +54,18 @@ type UpdateProfileData = {
   newPassword?: string;
 };
 
-type AuthContextType = {
+export type AuthContextType = {
   user: SelectUser | null;
   isLoading: boolean;
   error: Error | null;
+
   loginMutation: UseMutationResult<SelectUser, Error, LoginData>;
   logoutMutation: UseMutationResult<void, Error, void>;
-  registerMutation: UseMutationResult<SelectUser, Error, InsertUser>;
+  registerMutation: UseMutationResult<SelectUser, Error, RegisterData>;
   updateProfileMutation: UseMutationResult<SelectUser, Error, UpdateProfileData>;
   createConfigMutation: UseMutationResult<CreateConfigResponse, Error, CreateConfigArgs>;
+
+  serversQuery: UseQueryResult<Server[], Error>;
 };
 
 export const AuthContext = createContext<AuthContextType | null>(null);
@@ -65,30 +75,63 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [location, navigate] = useLocation();  // Правильная деструктуризация
 
   
-  const { data: user, error, isLoading, } = useQuery<SelectUser | null, Error>({
-      queryKey: ["/api/profile"],
-      queryFn: async () => {
-          try {
-              // напрямую через apiRequest, чтобы сразу авторизационный заголовок повесить
-              const res = await apiRequest("GET", "http://localhost:4000/api/profile");
-
-              if (!res.ok) {
-                  if (res.status === 401) {
-                      return null;  // если ошибка 401, возвращаем null
-                  }
-                  throw new Error("Ошибка при получении профиля");
-              }
-
-              return (await res.json()) as SelectUser;
-          } catch (err) {
-              // Обрабатываем ошибку в queryFn
-              if (err instanceof Error) {
-                  console.error("Ошибка при запросе профиля:", err.message);
-              }
-              throw err;  // Прокидываем ошибку дальше, чтобы она была обработана в error
+  const {
+    data: user,
+    error,
+    isLoading,
+  } = useQuery<SelectUser | null, Error>({
+    queryKey: ["/api/profile"],
+    queryFn: async () => {
+      try {
+        const res = await apiRequest("GET", "http://localhost:4000/api/profile");
+        if (!res.ok) {
+          if (res.status === 401) {
+            return null; // если не авторизован
           }
-      },
+          throw new Error("Ошибка при получении профиля");
+        }
+        return (await res.json()) as SelectUser;
+      } catch (err) {
+        if (err instanceof Error) {
+          console.error("Ошибка при запросе профиля:", err.message);
+        }
+        throw err;
+      }
+    },
   });
+
+const serversQuery: UseQueryResult<Server[], Error> = useQuery<Server[], Error>({
+  queryKey: ["/api/servers"],
+  queryFn: async () => {
+    // 1) ждём, пока user перестанет быть undefined
+    if (user === undefined) {
+      throw new Error("Ожидаем профиль"); // React Query будет автоматически ждать
+    }
+    // 2) если user === null → не залогинен
+    if (!user) {
+      throw new Error("Неавторизован");
+    }
+    // 3) если не админ → сразу возвращаем пустой массив
+    if (user.role !== "admin") {
+      return [];
+    }
+    // 4) проверяем, что токен точно есть (apiRequest внутри тоже проверит, но на всякий случай)
+    const token = localStorage.getItem("access_token");
+    if (!token) {
+      throw new Error("Необходим токен для авторизации");
+    }
+    // 5) делаем запрос через apiRequest
+    //    apiRequest сам добавит Authorization: Bearer <token> и проверит res.ok
+    const res = await apiRequest<null>("GET", "http://localhost:4000/api/servers");
+    // 6) парсим JSON и возвращаем
+    const payload = (await res.json()) as Server[];
+    return payload;
+  },
+  enabled: user !== undefined,    // дёргаем только после того, как user прочтётся
+  staleTime: 1000 * 60 * 2,       // кешируем 2 минуты
+  retry: 1,
+});
+
 
   const loginMutation = useMutation<SelectUser, Error, LoginData>({
     mutationFn: async ({ username, password }) => {
@@ -331,6 +374,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
         registerMutation,
         updateProfileMutation,
         createConfigMutation,
+        serversQuery
       }}
     >
       {children}

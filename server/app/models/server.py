@@ -12,5 +12,6 @@ class Server(db.Model):
     ssh_password = db.Column(db.String(200), nullable=False)
     max_users = db.Column(db.Integer, nullable=False)
     x_ui_port = db.Column(db.Integer, nullable=False)
+    ui_panel_link = db.Column(db.String(200), nullable=False)
 
     configurations = db.relationship('UserConfiguration', back_populates='server')

@@ -16,7 +16,7 @@ import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "
 import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-import { Loader2, User, Shield, CreditCard, Globe, Server } from "lucide-react";
+import { Loader2, User, Shield, CreditCard, Globe, Server} from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 
@@ -48,12 +48,12 @@ const basePrices: Record<ProxyPurchaseValues["country"], number> = {
 };
 
 type PurchaseVars = { country: string; duration: number; amount: number };
-type TabKey = "profile" | "credits" | "proxies";
+type TabKey = "profile" | "credits" | "proxies" | "servers";
 
 // ----------------- КОМПОНЕНТ -----------------
 export default function ProfilePage() {
   // -------------- Авторизация и мутации --------------
-  const { user, updateProfileMutation, createConfigMutation } = useAuth();
+  const { user, updateProfileMutation, createConfigMutation, serversQuery } = useAuth();
 
   // -------------- Состояния --------------
   const [activeTab, setActiveTab] = useState<TabKey>("profile");
@@ -217,12 +217,14 @@ export default function ProfilePage() {
               }
               className="w-full"
               >
-              <TabsList className="grid grid-cols-3 mb-8">
+              <TabsList className={`grid ${user?.role === "admin" ? "grid-cols-4" : "grid-cols-3"} mb-8`}>
                 <TabsTrigger value="profile">Профиль</TabsTrigger>
                 <TabsTrigger value="credits">Покупка конфигураций</TabsTrigger>
                 <TabsTrigger value="proxies">Мои прокси</TabsTrigger>
+                {user?.role === "admin" && (
+                  <TabsTrigger value="servers">Серверы</TabsTrigger>
+                )}
               </TabsList>
-  
 
                 {/* Вкладка профиля */}
                 <TabsContent value="profile" className="w-full max-w-none">
@@ -335,18 +337,25 @@ export default function ProfilePage() {
                         
                       <div className="flex justify-end space-x-2">
 
-                        {/* Если роль администратора, отображаем кнопку для перехода на админ-панель */}
-                        {/*{user?.role === "admin" && (
-                          <Link href="/admin">
-                            <Button>Перейти в панель администрирования</Button>
-                          </Link>
-                        )}*/}
-
                         {user?.role === "admin" && (
                           <Button
-                            onClick={() => window.open("http://192.145.28.171:18519/Dx92f01YjGdrfH7", "_blank")}
+                            onClick={() => window.open("http://localhost:5601/app/discover#/?_g=(filters:!(),refreshInterval:(pause:!t,value:0),time:(from:now-15m,to:now))&_a=(columns:!(),filters:!(),index:eedac610-3b9b-11f0-b232-79e6dd0aeeca,interval:auto,query:(language:kuery,query:''),sort:!(!('@timestamp',desc)))", "_blank")}
                           >
-                            Перейти в панель администрирования
+                            Логи
+                          </Button>
+                        )}
+                        {user?.role === "admin" && (
+                          <Button
+                            onClick={() => window.open("http://localhost:16686/search?end=1748707174663000&limit=20&lookback=1h&maxDuration&minDuration&service=flaskapp&start=1748703574663000", "_blank")}
+                          >
+                            Трейсинг
+                          </Button>
+                        )}
+                        {user?.role === "admin" && (
+                          <Button
+                            onClick={() => window.open("http://localhost:3001/a/grafana-metricsdrilldown-app/drilldown?nativeHistogramMetric=&layout=grid&filters-rule=&filters-prefix=&filters-suffix=&from=now-1h&to=now&timezone=browser&var-otel_resources=&var-filters=&var-otel_and_metric_filters=&var-deployment_environment=undefined&var-labelsWingman=%28none%29&search_txt=http_server_duration_milliseconds_count&var-metrics-reducer-sort-by=dashboard-usage&var-ds=cenfzlm5s1kw0c&var-other_metric_filters=&metric=http_server_duration_milliseconds_count&actionView=breakdown&var-groupby=$__all", "_blank")}
+                          >
+                            Метрики
                           </Button>
                         )}
 
@@ -373,8 +382,11 @@ export default function ProfilePage() {
                 <TabsContent value="credits" className="w-full max-w-none">
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                     {/* Способы оплаты - ЛЕВАЯ колонка */}
-                    <div>
-                      <h3 className="text-xl font-semibold mb-4">Способы оплаты</h3>
+                    <div className="space-y-6">
+                      <div className="flex items-center gap-4">
+                        <CreditCard className="h-8 w-8 text-green-500" />
+                        <h3 className="text-xl font-semibold">Способы оплаты</h3>
+                      </div>
                       <div className="space-y-4">
                         {/* Банковская карта */}
                         <div
@@ -535,7 +547,7 @@ export default function ProfilePage() {
                 </TabsContent>
 
 
-                {/* Вкладка «Мои прокси»*/}
+            {/* Вкладка «Мои прокси»*/}
             <TabsContent value="proxies">
               <div className="space-y-6">
                 <div className="flex items-center gap-4">
@@ -632,6 +644,94 @@ export default function ProfilePage() {
                     )}
                   </>
                 )}
+              </div>
+            </TabsContent>
+
+            {/* ---------------- Вкладка «Серверы» ---------------- */}
+            <TabsContent value="servers" className="w-full max-w-none">
+              <div className="space-y-6">
+                <div className="flex items-center gap-4">
+                  <Server className="h-8 w-8 text-green-500" />
+                  <h3 className="text-xl font-semibold">Список серверов</h3>
+                </div>
+
+                {/* Если не админ */}
+                {user?.role !== "admin" && (
+                  <p className="text-red-500">У вас нет прав для просмотра серверов.</p>
+                )}
+
+                {/* Загрузка */}
+                {user?.role === "admin" && serversQuery.isLoading && (
+                  <p className="text-gray-400">Загрузка серверов…</p>
+                )}
+
+                {/* Ошибка */}
+                {user?.role === "admin" && serversQuery.error && (
+                  <p className="text-red-500">Ошибка: {serversQuery.error.message}</p>
+                )}
+
+                {/* Данные */}
+                {user?.role === "admin" &&
+                  !serversQuery.isLoading &&
+                  !serversQuery.error && (
+                    <>
+                      {serversQuery.data && serversQuery.data.length > 0 ? (
+                        <div className="grid grid-cols-1 gap-4">
+                          {serversQuery.data.map((srv) => (
+                            <div
+                              key={srv.id}
+                              className="bg-black border border-green-500/30 rounded-2xl p-4 flex flex-col md:flex-row md:items-center md:justify-between"
+                            >
+                              {/* Левая часть: ID, Host и Country */}
+                              <div className="flex-1 mb-4 md:mb-0">
+                                <div className="flex items-center gap-2">
+                                  <span className="inline-block bg-green-500 text-black px-2 py-1 rounded-full text-xs font-semibold">
+                                    #{srv.id}
+                                  </span>
+                                  <h3 className="text-lg font-semibold text-white">
+                                    {srv.host}
+                                  </h3>
+                                </div>
+                                <p className="mt-1 text-sm text-gray-300">
+                                  {srv.country}
+                                </p>
+                              </div>
+                          
+                              {/* Правая часть (статистика + кнопка) */}
+                              <div className="flex flex-col md:flex-row md:items-center gap-4">
+                                <div className="text-center">
+                                  <div className="text-xs text-gray-400 uppercase">
+                                    Макс. пользователей
+                                  </div>
+                                  <div className="text-white font-semibold">
+                                    {srv.max_users}
+                                  </div>
+                                </div>
+                                <div className="text-center">
+                                  <div className="text-xs text-gray-400 uppercase">
+                                    Активные пользователи
+                                  </div>
+                                  <div className="text-white font-semibold">
+                                    {srv.users_count}
+                                  </div>
+                                </div>
+                          
+                                {/* Кнопка для перехода на UI-панель */}
+                                <Button
+                                  onClick={() => window.open(srv.ui_panel_link, "_blank")}
+                                  className="px-6 py-2 bg-primary hover:bg-primary/90 text-black rounded-md transition duration-300"
+                                >
+                                  UI-Панель
+                                </Button>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-gray-400">Серверы не найдены.</p>
+                      )}
+                    </>
+                  )}
               </div>
             </TabsContent>
             </Tabs>

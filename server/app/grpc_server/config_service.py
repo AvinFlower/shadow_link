@@ -8,6 +8,15 @@ import base64
 import os
 from grpc_reflection.v1alpha import reflection
 
+
+# ─── ПОДКЛЮЧЕНИЕ REDIS «НА МЕСТЕ» ──────────────────────────────────────────────
+import redis
+from dotenv import load_dotenv
+load_dotenv()
+redis_client = redis.Redis.from_url(os.getenv("REDIS_URL"))
+# ────────────────────────────────────────────────────────────────────────────────
+
+
 # Импорт сгенерированных protobuf-классов
 from app.generated_grpc import config_service_pb2, config_service_pb2_grpc
 from app.models.server import Server
@@ -20,11 +29,32 @@ from app.utils.vps_data import (
     restart_xui,
     count_users_on_port,
     get_vps_clients_configurations,
-    get_cached_user_count
+    # get_cached_user_count
 )
 from app import create_app
 
 app = create_app()
+
+# Вспомогательные функции для работы с ключами Redis:
+def _redis_key_for_server_count(server_id: int) -> str:
+    return f"server:{server_id}:active_config_count"
+
+def get_cached_user_count(host, port, ssh_username, ssh_password, server_id: int, force_reload: bool=False) -> int:
+    """
+    Возвращает количество конфигураций (active users) для сервера server_id.
+    Сначала пытается взять значение из Redis; если не нашёл — считает из БД и кладёт в Redis с TTL = 300 сек.
+    """
+    key = _redis_key_for_server_count(server_id)
+    raw = redis_client.get(key)
+    if raw is not None and not force_reload:
+        try:
+            return int(raw)
+        except ValueError:
+            pass
+    # Если не нашли или «битое» значение — пересчитываем и записываем в Redis заново
+    count = UserConfiguration.query.filter_by(server_id=server_id).count()
+    redis_client.set(key, count, ex=300)
+    return count
 
 class ConfigurationServiceServicer(config_service_pb2_grpc.ConfigurationServiceServicer):
     def CreateConfiguration(self, request, context):
@@ -79,6 +109,13 @@ class ConfigurationServiceServicer(config_service_pb2_grpc.ConfigurationServiceS
                 )
                 db.session.add(cfg)
                 db.session.commit()
+
+                redis_key = _redis_key_for_server_count(selected.id)
+                if redis_client.exists(redis_key):
+                    redis_client.incr(redis_key, amount=1)
+                else:
+                    actual_count = UserConfiguration.query.filter_by(server_id=selected.id).count()
+                    redis_client.set(redis_key, actual_count, ex=300)
 
                 # Ответ gRPC
                 return config_service_pb2.CreateConfigResponse(
@@ -161,6 +198,19 @@ class ConfigurationServiceServicer(config_service_pb2_grpc.ConfigurationServiceS
                         db.session.delete(cfg)
 
                 db.session.commit()
+
+                affected_server_ids = set()
+                for entry in user_vps:
+                    if entry['id'] in new_uuids:
+                        affected_server_ids.add(entry['server_id'])
+                for cfg in local_configs:
+                    if cfg.client_uuid in removed_uuids:
+                        affected_server_ids.add(cfg.server_id)
+
+                for sid in affected_server_ids:
+                    key = _redis_key_for_server_count(sid)
+                    actual = UserConfiguration.query.filter_by(server_id=sid).count()
+                    redis_client.set(key, actual, ex=300)
 
                 return config_service_pb2.SyncConfigsResponse(
                     message="Configurations synchronized successfully"
