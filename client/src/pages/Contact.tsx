@@ -10,41 +10,41 @@ const Contact: React.FC = () => {
     {
       icon: Mail,
       title: 'Напишите нам',
-      description: 'support@shadowlink.com',
+      description: 'shadowlink@tutamail.com',
       details: 'Обычно отвечаем в течение 24 часов'
     },
     {
       icon: Phone,
       title: 'Позвоните нам',
-      description: '+1 (555) 123-4567',
-      details: 'Пн-Пт, 9:00-17:00 по восточному времени'
+      description: '+7 (912) 736-6610',
+      details: 'Пн-Пт, 9:00-17:00 по МСК'
     },
     {
       icon: MessageSquare,
-      title: 'Живой чат',
-      description: 'Доступен 24/7 для мгновенной поддержки',
-      details: 'Среднее время ответа: 2 минуты'
+      title: 'Telegram чат',
+      description: '7/0, 9:00-20:00 по МСК',
+      details: 'Среднее время ответа: 10 минут'
     }
   ];
 
   // Офисные локации
-  const officeLocations = [
-    {
-      city: 'Нью-Йорк',
-      address: '123 Tech Plaza, Suite 400, Нью-Йорк, NY 10001',
-      phone: '+1 (555) 123-4567'
-    },
-    {
-      city: 'Лондон',
-      address: '456 Digital Avenue, Floor 3, Лондон, Великобритания EC2A 1AB',
-      phone: '+44 20 1234 5678'
-    },
-    {
-      city: 'Сингапур',
-      address: '789 Cyber Street, #10-01, Сингапур 049315',
-      phone: '+65 6123 4567'
-    }
-  ];
+  // const officeLocations = [
+  //   {
+  //     city: 'Нью-Йорк',
+  //     address: '123 Tech Plaza, Suite 400, Нью-Йорк, NY 10001',
+  //     phone: '+1 (555) 123-4567'
+  //   },
+  //   {
+  //     city: 'Лондон',
+  //     address: '456 Digital Avenue, Floor 3, Лондон, Великобритания EC2A 1AB',
+  //     phone: '+44 20 1234 5678'
+  //   },
+  //   {
+  //     city: 'Сингапур',
+  //     address: '789 Cyber Street, #10-01, Сингапур 049315',
+  //     phone: '+65 6123 4567'
+  //   }
+  // ];
 
   return (
     <div className="pt-32 pb-20">
@@ -84,7 +84,7 @@ const Contact: React.FC = () => {
               ))}
             </div>
             
-            <motion.div
+            {/* <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.4 }}
@@ -104,9 +104,9 @@ const Contact: React.FC = () => {
                   </div>
                 ))}
               </div>
-            </motion.div>
+            </motion.div> */}
             
-            <motion.div
+            {/* <motion.div
               initial={{ opacity: 0, y: 20 }}
               animate={{ opacity: 1, y: 0 }}
               transition={{ duration: 0.5, delay: 0.6 }}
@@ -123,7 +123,7 @@ const Contact: React.FC = () => {
               <p className="text-muted-foreground mt-2">
                 * Техническая поддержка доступна 24/7 через наш живой чат и email.
               </p>
-            </motion.div>
+            </motion.div> */}
           </div>
           
           <div>
@@ -163,7 +163,7 @@ const Contact: React.FC = () => {
             <div className="bg-card p-6 rounded-lg border border-border">
               <h3 className="font-semibold mb-2">Какие способы оплаты вы принимаете?</h3>
               <p className="text-muted-foreground">
-                Мы принимаем все основные кредитные карты, PayPal, а также криптовалюты, включая Bitcoin, Ethereum и Litecoin.
+                Мы принимаем все основные кредитные карты, банковские карты РФ, а также электронный доллар(USDT).
               </p>
             </div>
             
@@ -189,7 +189,7 @@ const Contact: React.FC = () => {
             Нужен индивидуальный пакет для вашей организации? Наша команда может создать решение, соответствующее вашим требованиям.
           </p>
           <p className="text-lg font-medium">
-            Свяжитесь с нашей командой по корпоративным продажам: <span className="text-primary">enterprise@shadowlink.com</span>
+            Свяжитесь с нашей командой по корпоративным продажам: <span className="text-primary">shadowlink@tutamail.com | +7 (912) 736-6610</span>
           </p>
         </motion.div>
       </div>

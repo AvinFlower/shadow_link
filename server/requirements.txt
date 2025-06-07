@@ -29,3 +29,4 @@ opentelemetry-instrumentation-redis
 opentelemetry-instrumentation-celery
 opentelemetry-exporter-prometheus
 prometheus_client
+deprecated

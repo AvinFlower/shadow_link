@@ -16,6 +16,10 @@ import MatrixBackground from "@/components/MatrixBackground";
 import ScrollToTop from "@/components/ScrollToTop";
 import { AuthProvider } from "@/hooks/use-auth";
 import { ProtectedRoute } from "@/lib/protected-route";
+import TermsPage          from '@/footer-components/terms';
+import PrivacyPage        from '@/footer-components/privacy';
+import CookiesPage        from '@/footer-components/cookies';
+import AcceptableUsePage  from '@/footer-components/acceptable-use';
 
 function Router() {
   return (
@@ -26,7 +30,14 @@ function Router() {
       <Route path="/contact" component={Contact} />
       <Route path="/auth" component={AuthPage} />
       <ProtectedRoute path="/profile" component={ProfilePage} />
+
+      <Route path="/terms" component={TermsPage} />
+      <Route path="/privacy" component={PrivacyPage} />
+      <Route path="/cookies" component={CookiesPage} />
+      <Route path="/acceptable-use" component={AcceptableUsePage} />
+      
       <Route component={NotFound} />
+
     </Switch>
   );
 }
