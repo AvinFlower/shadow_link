@@ -116,15 +116,30 @@ def change_password():
 
     return jsonify(user.to_json()), 200
 
+# @auth_bp.route('/profile', methods=['GET'])
+# @jwt_required()
+# def profile():
+#     # Получаем информацию о текущем пользователе из JWT
+#     user_id = get_jwt_identity()  # Получаем ID пользователя из токена
+#     user = User.query.get(user_id)
+
+#     if not user:
+#         return make_response(jsonify({'message': 'User not found'}), 404)
+
+#     return jsonify(user.to_json()), 200
+
 @auth_bp.route('/profile', methods=['GET'])
 @jwt_required()
 def profile():
-    # Получаем информацию о текущем пользователе из JWT
-    user_id = get_jwt_identity()  # Получаем ID пользователя из токена
-    user = User.query.get(user_id)
+    user_id = get_jwt_identity()
 
+    try:
+        user_id = int(user_id)
+    except ValueError:
+        return make_response(jsonify({'message': 'Invalid user id format'}), 401)
+
+    user = User.query.get(user_id)
     if not user:
         return make_response(jsonify({'message': 'User not found'}), 404)
 
     return jsonify(user.to_json()), 200
-

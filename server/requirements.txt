@@ -30,3 +30,6 @@ opentelemetry-instrumentation-celery
 opentelemetry-exporter-prometheus
 prometheus_client
 deprecated
+
+pytest
+pytest-timeout

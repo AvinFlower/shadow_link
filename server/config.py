@@ -1,3 +1,4 @@
+# F:\Education\OOP\shadow_link\server\config.py
 import os
 from datetime import timedelta
 
@@ -30,3 +31,12 @@ class ProductionConfig(BaseConfig):
 class Config(DevelopmentConfig):
     """По умолчанию берем DevelopmentConfig"""
     pass
+
+class TestingConfig(BaseConfig):
+    TESTING = True
+    SQLALCHEMY_DATABASE_URI = 'sqlite:///:memory:'
+    JWT_SECRET_KEY = 'test-secret'
+    BCRYPT_LOG_ROUNDS = 4
+    REDIS_URL = 'redis://localhost:6379/0'
+    CELERY_TASK_ALWAYS_EAGER = True
+    USE_LOGSTASH = False
