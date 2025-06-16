@@ -20,7 +20,22 @@ import { Loader2, User, Shield, CreditCard, Globe, Server} from "lucide-react";
 import { motion } from "framer-motion";
 import { useToast } from "@/hooks/use-toast";
 
-// ----------------- СХЕМЫ -----------------
+  // -------------- Константы прокси --------------
+  const pricesByTariffAndCountry = {
+    Russia: { "Базовый сервер": 200, "Максимальный сервер": 300, "Корпоративный сервер": 500 },
+    Poland: { "Базовый сервер": 200, "Максимальный сервер": 300, "Корпоративный сервер": 500 },
+    USA: { "Базовый сервер": 200, "Максимальный сервер": 300, "Корпоративный сервер": 500 },
+    UK: { "Базовый сервер": 200, "Максимальный сервер": 300, "Корпоративный сервер": 500 },
+    Denmark: { "Базовый сервер": 200, "Максимальный сервер": 300, "Корпоративный сервер": 500 },
+  };
+
+  const yearDiscountPricesByTariff = {
+    "Базовый сервер": 1800,
+    "Максимальный сервер": 2900,
+    "Корпоративный сервер": 4500,
+  };
+
+// -------------- СХЕМЫ --------------
 const profileSchema = z.object({
   username: z.string().min(2),
   email: z.string().email(),
@@ -33,20 +48,12 @@ const profileSchema = z.object({
 type ProfileValues = z.infer<typeof profileSchema>;
 
 const proxyPurchaseSchema = z.object({
+  tariff: z.enum(["Базовый сервер", "Максимальный сервер", "Корпоративный сервер"]),
   country: z.enum(["Russia","Poland","USA","UK","Denmark"]),
   months: z.coerce.number().min(1),
-  price: z.number(),               // Если что потом удалить
+  price: z.number(), // Временно для валидации
 });
 type ProxyPurchaseValues = z.infer<typeof proxyPurchaseSchema>;
-
-const basePrices: Record<ProxyPurchaseValues["country"], number> = {
-  Russia: 200,
-  Poland: 200,
-  USA: 200,
-  UK: 200,
-  Denmark: 200,
-};
-
 type PurchaseVars = { country: string; duration: number; amount: number };
 type TabKey = "profile" | "credits" | "proxies" | "servers";
 
@@ -97,24 +104,37 @@ export default function ProfilePage() {
   });
   const purchaseForm = useForm<ProxyPurchaseValues>({
     resolver: zodResolver(proxyPurchaseSchema),
-    defaultValues: { country: "Russia", months: 1, price: basePrices["Russia"] * 1 },
+    defaultValues: {
+    tariff: "Базовый сервер",
+    country: "Poland",
+    months: 1,
+    price: pricesByTariffAndCountry["Poland"]["Базовый сервер"],
+    },
   });
-
-  // -------------- Константы прокси --------------
-  const countryOptions: { value: ProxyPurchaseValues["country"]; label: string; price: number }[] = [
-    { value: "Russia", label: "Россия", price: 250 },
-    { value: "Poland", label: "Польша", price: 300 },
-    { value: "USA", label: "США", price: 400 },
-    { value: "UK", label: "Великобритания", price: 380 },
-    { value: "Denmark", label: "Германия", price: 360 },
-  ];
 
   // -------------- Вычисление цены --------------
   const watchedCountry = purchaseForm.watch("country");
   const watchedMonths = purchaseForm.watch("months");
+  const watchedTariff = purchaseForm.watch("tariff");
+  
   const computedPrice = useMemo(() => {
-    return basePrices[watchedCountry] * watchedMonths;
-  }, [watchedCountry, watchedMonths]);
+    const monthsNumber = Number(watchedMonths) || 1;
+
+    const countryPrices = pricesByTariffAndCountry[watchedCountry as keyof typeof pricesByTariffAndCountry];
+    if (!countryPrices) return 0;
+
+    const basePrice = countryPrices[watchedTariff as keyof typeof countryPrices];
+    if (!basePrice) return 0;
+
+    if (monthsNumber === 12) {
+      return yearDiscountPricesByTariff[watchedTariff as keyof typeof yearDiscountPricesByTariff] ?? basePrice * monthsNumber;
+    }
+
+    return basePrice * monthsNumber;
+  }, [watchedCountry, watchedTariff, watchedMonths]);
+
+
+
 
   // -------------- Обработчики --------------
   function onPurchaseSubmit(data: ProxyPurchaseValues) {
@@ -184,8 +204,9 @@ export default function ProfilePage() {
   }, []);
 
   useEffect(() => {
-    purchaseForm.setValue("price", computedPrice);
+    purchaseForm.setValue("price", computedPrice, { shouldValidate: true, shouldDirty: true });
   }, [computedPrice]);
+
 
   // -------------- Фильтрация конфигов --------------
   const activeConfigs = useMemo(() => configs?.filter(c => new Date(c.expiration_date) > new Date()) || [], [configs]);
@@ -403,7 +424,7 @@ export default function ProfilePage() {
                             </div>
                             <div>
                               <h4 className="font-semibold">Банковская карта</h4>
-                              <p className="text-sm text-gray-400">Visa, Mastercard, Mir</p>
+                              <p className="text-sm text-gray-400">Mir</p>
                             </div>
                           </div>
                           <Button
@@ -430,7 +451,7 @@ export default function ProfilePage() {
                             </div>
                             <div>
                               <h4 className="font-semibold">Электронные кошельки</h4>
-                              <p className="text-sm text-gray-400">PayPal, Qiwi, WebMoney</p>
+                              <p className="text-sm text-gray-400">Юмани</p>
                             </div>
                           </div>
                           <Button
@@ -457,7 +478,7 @@ export default function ProfilePage() {
                             </div>
                             <div>
                               <h4 className="font-semibold">Криптовалюты</h4>
-                              <p className="text-sm text-gray-400">Bitcoin, Ethereum, USDT</p>
+                              <p className="text-sm text-gray-400">USDT</p>
                             </div>
                           </div>
                           <Button
@@ -478,6 +499,21 @@ export default function ProfilePage() {
                         <form onSubmit={purchaseForm.handleSubmit(onPurchaseSubmit)} className="space-y-6">
                           {/* Контейнер для страны прокси и срока */}
                           <div className="p-4 border border-green-500/30 rounded-lg space-y-4">
+                            <FormField control={purchaseForm.control} name="tariff" render={({ field }) => (
+                              <FormItem>
+                                <FormLabel>Выберите тариф</FormLabel>
+                                <FormControl>
+                                  <select
+                                    {...field}
+                                    className="h-10 w-full rounded-md border border-input bg-black px-3 py-2 text-sm text-white shadow-sm placeholder:text-muted-foreground focus:outline-none focus:ring-2 focus:ring-ring   focus:ring-offset-2"
+                                  >
+                                    <option value="Базовый сервер">Базовый сервер</option>
+                                    <option value="Максимальный сервер">Максимальный сервер</option>
+                                    <option value="Корпоративный сервер">Корпоративный сервер</option>
+                                  </select>
+                                </FormControl>
+                              </FormItem>
+                            )} />
                             <FormField control={purchaseForm.control} name="country" render={({ field }) => (
                               <FormItem>
                                 <FormLabel>Страна прокси</FormLabel>

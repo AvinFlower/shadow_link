@@ -4,6 +4,7 @@ Flask-SQLAlchemy
 Flask-CORS
 Flask-Login
 Flask-Bcrypt
+Flask-Migrate
 Werkzeug
 
 python-dateutil

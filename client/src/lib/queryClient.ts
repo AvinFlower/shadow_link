@@ -35,17 +35,21 @@ export const getQueryFn: <T>(options: {
 }) => QueryFunction<T> =
   ({ on401: unauthorizedBehavior }) =>
   async ({ queryKey }) => {
-    // Сделаем запрос с fetch с проверкой авторизации
-    const res = await fetch(queryKey[0] as string, {
-      credentials: "include", // Это гарантирует, что куки отправляются с запросом
-    });
+    const url = queryKey[0] as string;
 
-    if (unauthorizedBehavior === "returnNull" && res.status === 401) {
-      return null;  // Возвращаем null, если ошибка 401, если указано такое поведение
+    try {
+      const res = await apiRequest("GET", url);
+      return await res.json();
+    } catch (error: any) {
+      if (
+        unauthorizedBehavior === "returnNull" &&
+        error instanceof Error &&
+        error.message.includes("401")
+      ) {
+        return null;
+      }
+      throw error;
     }
-
-    await throwIfResNotOk(res);  // Проверка ошибки ответа
-    return await res.json(); // Возвращаем ответ в формате JSON
   };
 
 // Настройки клиента React Query, с дефолтными значениями для запросов и мутаций

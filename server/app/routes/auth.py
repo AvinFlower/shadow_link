@@ -33,28 +33,33 @@ def register():
     if User.query.filter_by(email=email).first():
         return make_response(jsonify({'message': 'Email already exists'}), 400)
 
-    new_user = User(
+    user = User(
         username=username,
         email=email,
         birth_date=birth_date,
         full_name=full_name,
         role=role,
     )
-    new_user.set_password(password)
+    user.set_password(password)
 
     try:
-        db.session.add(new_user)
+        db.session.add(user)
         db.session.commit()
-        access_token = create_access_token(identity=str(new_user.id), expires_delta=timedelta(days=7))
-        response = jsonify({
-            'message': 'User created successfully',
-            'access_token': access_token,
-            'user': new_user.to_json()
-        })
-        return response, 201
+        access_token = create_access_token(identity=str(user.id), expires_delta=timedelta(days=7))
+
+        return jsonify({
+            'message': 'Registration successful',
+            'access': {
+                'jwt_token': access_token,
+                'expires_at': (datetime.utcnow() + timedelta(days=7)).isoformat()
+            },
+            'user': user.to_json()
+        }), 201
+
     except Exception as e:
         db.session.rollback()
         return make_response(jsonify({'message': 'Error creating user', 'error': str(e)}), 500)
+
 
 
 @auth_bp.route('/login', methods=['POST'])
@@ -76,13 +81,13 @@ def login():
     access_token = create_access_token(identity=str(user.id), expires_delta=timedelta(days=7))
 
     return jsonify({
-    'message': 'Login successful',
-    'access': {
-        'jwt_token': access_token,
-        'expires_at': (datetime.utcnow() + timedelta(days=7)).isoformat()  # Пример, токен истекает через 1 час
-    },
-    'user': user.to_json()
-}), 200
+        'message': 'Login successful',
+        'access': {
+            'jwt_token': access_token,
+            'expires_at': (datetime.utcnow() + timedelta(days=7)).isoformat()
+        },
+        'user': user.to_json()
+    }), 200
 
 
 @auth_bp.route('/logout', methods=['POST'])
@@ -115,18 +120,6 @@ def change_password():
     db.session.commit()
 
     return jsonify(user.to_json()), 200
-
-# @auth_bp.route('/profile', methods=['GET'])
-# @jwt_required()
-# def profile():
-#     # Получаем информацию о текущем пользователе из JWT
-#     user_id = get_jwt_identity()  # Получаем ID пользователя из токена
-#     user = User.query.get(user_id)
-
-#     if not user:
-#         return make_response(jsonify({'message': 'User not found'}), 404)
-
-#     return jsonify(user.to_json()), 200
 
 @auth_bp.route('/profile', methods=['GET'])
 @jwt_required()

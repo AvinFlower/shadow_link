@@ -9,6 +9,8 @@ from app.routes.users import users_bp
 from app.routes.admin import admin_bp
 from app.routes.servers import server_bp
 from app.routes.user_configurations import user_configurations_bp
+from app.models.user_configuration import UserConfiguration
+from app.models.server import Server
 from app.models.user import User
 
 # OpenTelemetry imports
@@ -79,6 +81,12 @@ def create_app():
         supports_credentials=True
     )
     jwt.init_app(app)
+    
+    @app.before_request
+    def log_auth_header():
+        from flask import request
+        auth = request.headers.get('Authorization', None)
+        print(f"Authorization header: {auth}")
 
     @login_manager.user_loader
     def load_user(user_id):

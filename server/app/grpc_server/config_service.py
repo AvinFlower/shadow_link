@@ -69,7 +69,7 @@ class ConfigurationServiceServicer(config_service_pb2_grpc.ConfigurationServiceS
             servers = Server.query.filter_by(country=request.country).all()
             selected = next(
                 (s for s in servers
-                 if get_cached_user_count(s.host, s.port, s.ssh_username, s.ssh_password) < s.max_users),
+                 if get_cached_user_count(s.host, s.port, s.ssh_username, s.ssh_password, s.id) < s.max_users),
                 None
             )
             if not selected:

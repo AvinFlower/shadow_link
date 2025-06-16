@@ -149,8 +149,8 @@ const serversQuery: UseQueryResult<Server[], Error> = useQuery<Server[], Error>(
       const data = await res.json();
   
       // Сохраняем JWT
-      // localStorage.setItem("access_token", data.access.jwt_token);
-      localStorage.setItem("access_token", data.access_token);
+      localStorage.setItem("access_token", data.access.jwt_token);
+      // localStorage.setItem("access_token", data.access_token);
       return data.user as SelectUser;
     },
     onSuccess: (user) => {
@@ -198,8 +198,9 @@ const serversQuery: UseQueryResult<Server[], Error> = useQuery<Server[], Error>(
       const data = await res.json();
   
       // Сохраняем токен и возвращаем пользователя
-      // localStorage.setItem("access_token", data.access.jwt_token);
-      localStorage.setItem("access_token", data.access_token);
+      // localStorage.setItem("access_token", data.jwt_token);
+      localStorage.setItem("access_token", data.access.jwt_token);
+      // localStorage.setItem("access_token", data.access_token);
       return data.user as SelectUser;
     },
     onSuccess: (user) => {

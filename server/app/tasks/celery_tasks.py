@@ -96,3 +96,63 @@ def setup_periodic_tasks_sync(sender, **kwargs):
         sync_all_user_configurations.s(),
         name='sync-configs-every-3-minutes'
     )
+
+
+@celery.task
+def load_servers_from_env():
+    from app import create_app, db
+    from app.models.server import Server
+    from sqlalchemy.exc import IntegrityError
+
+    flask_app = create_app()
+    with flask_app.app_context():
+        i = 1
+        added = 0
+        while True:
+            host = os.getenv(f"HOST{i}")
+            if not host:
+                break  # нет следующего сервера
+
+            try:
+                port = os.getenv(f"PORT{i}")
+                existing_server = Server.query.filter_by(host=host, port=port).first()
+                if existing_server:
+                    print(f"[ENV_LOAD] Server {host}:{port} уже существует. Пропускаем.", flush=True)
+                    i += 1
+                    continue
+
+                server = Server(
+                    country=os.getenv(f"COUNTRY{i}"),
+                    host=host,
+                    port=port,
+                    ssh_username=os.getenv(f"USERNAME{i}"),
+                    ssh_password=os.getenv(f"PASSWORD{i}"),
+                    max_users=int(os.getenv(f"MAX_USERS{i}")),
+                    x_ui_port=int(os.getenv(f"PORT_X_UI{i}")),
+                    ui_panel_link=os.getenv(f"UI_PANEL_LINK{i}")
+                )
+
+                db.session.add(server)
+                db.session.commit()
+                print(f"[ENV_LOAD] Добавлен сервер: {host}:{port}", flush=True)
+                added += 1
+
+            except IntegrityError as e:
+                db.session.rollback()
+                print(f"[ENV_LOAD][ERROR] Ошибка добавления {host}:{port}: {e}", flush=True)
+            except Exception as e:
+                print(f"[ENV_LOAD][ERROR] Ошибка чтения сервера #{i}: {e}", flush=True)
+
+            i += 1
+
+        print(f"[ENV_LOAD] Всего добавлено серверов: {added}", flush=True)
+        
+
+@celery.on_after_configure.connect
+def setup_periodic_tasks_sync(sender, **kwargs):
+    load_servers_from_env.apply_async()
+    sender.add_periodic_task(
+        crontab(minute='*/10'),
+        sync_all_user_configurations.s(),
+        name='sync-servers-every-10-minutes'
+    )
