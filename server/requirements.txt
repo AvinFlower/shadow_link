@@ -34,3 +34,4 @@ deprecated
 
 pytest
 pytest-timeout
+pytest-timer
