@@ -278,12 +278,12 @@ def setup_all_periodic_tasks(sender, **kwargs):
         name='update-vps-user-counts-every-minute'
     )
     sender.add_periodic_task(
-        crontab(minute='*/3'),
+        crontab(minute='*/1'),
         sync_all_user_configurations.s(),
         name='sync-configs-every-3-minutes'
     )
     sender.add_periodic_task(
-        crontab(minute='*/10'),
+        crontab(minute='*/1'),
         load_servers_from_env.s(),
         name='load-servers-every-10-minutes'
     )

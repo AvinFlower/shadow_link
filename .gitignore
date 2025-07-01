@@ -1,13 +1,13 @@
-#frontend
-node_modules
-dist
-.DS_Store
-vite.config.ts.*
-*.tar.gz
+# #frontend
+# node_modules
+# dist
+# .DS_Store
+# vite.config.ts.*
+# *.tar.gz
 
-#backend
-app.py
-check_pass.py
-compose.yml
-server/app/vps_data.py
-server/.env
+# #backend
+# app.py
+# check_pass.py
+# compose.yml
+# server/app/vps_data.py
+# server/.env

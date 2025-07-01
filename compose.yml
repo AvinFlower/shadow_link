@@ -1,0 +1,292 @@
+services:
+
+  jaeger:
+    image: jaegertracing/all-in-one:1.52
+    container_name: jaeger
+    ports:
+      - "6831:6831/udp"    # OTLP/Thrift agent
+      - "16686:16686"      # UI
+    networks:
+      - app-network
+
+  db:
+    container_name: db
+    image: postgres:17
+    environment:
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: postgres
+      POSTGRES_DB: postgres
+    # ports:
+    #   - "5432:5432"
+    volumes:
+      - pgdata:/var/lib/postgresql/data
+    restart: unless-stopped
+    networks:
+      - app-network
+
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+    restart: unless-stopped
+
+  elasticsearch:
+    image: elasticsearch:7.17.0
+    container_name: elasticsearch
+    user: "1000:1000"           # run as the elasticsearch UID
+    environment:
+      - discovery.type=single-node
+      - logger.level=warn
+      - logger.org.elasticsearch=warn
+      - logger.org.apache=warn
+      - xpack.monitoring.enabled=true
+    ports:
+      - "9200:9200"
+    networks:
+      - app-network
+
+  logstash:
+    image: logstash:7.17.0
+    container_name: logstash
+    depends_on:
+      - elasticsearch
+    ports:
+      - "5000:5000"
+    volumes:
+      - ./server/logstash.conf:/usr/share/logstash/pipeline/logstash.conf:ro
+    environment:
+      - PIPELINE_ECS_COMPATIBILITY=v1
+    command:
+      - "/usr/share/logstash/bin/logstash"
+      - "-f" 
+      - "/usr/share/logstash/pipeline/logstash.conf"
+      - "--log.level"
+      - "warn"
+      - "--pipeline.ecs_compatibility"
+      - "v1"
+    networks:
+      - app-network
+
+  grpc_server:
+    build:
+      context: .
+      dockerfile: server/flask.dockerfile
+    command: python -m app.grpc_server.server_service
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    ports:
+      - "50051:50051"
+    depends_on:
+      - db
+    networks:
+      - app-network
+
+  grpc_config:
+    build:
+      context: .
+      dockerfile: server/flask.dockerfile
+    command: python -m app.grpc_server.config_service
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+    ports:
+      - "50052:50052"
+    depends_on:
+      - db
+    networks:
+      - app-network
+
+  flaskapp:
+    container_name: flaskapp
+    build:
+      context: . 
+      dockerfile: server/flask.dockerfile
+    ports:
+      - "4000:4000"
+      # - "8001:8001" 
+    env_file:
+    - server/.env
+    environment:
+    - GRPC_CONFIG_HOST=grpc_config
+    - GRPC_CONFIG_PORT=50052
+    - GRPC_SERVER_HOST=grpc_server
+    - GRPC_SERVER_PORT=50051
+    - REDIS_URL=redis://redis:6379/0
+    - LOGSTASH_HOST=logstash
+    - LOGSTASH_PORT=5000
+    - OTEL_SERVICE_NAME=flaskapp
+    - OTEL_EXPORTER_JAEGER_AGENT_HOST=jaeger
+    - OTEL_EXPORTER_JAEGER_AGENT_PORT=6831
+    - OTEL_TRACES_SAMPLER=parentbased_always_on
+    depends_on:
+      - db
+      - redis
+      - logstash
+      - grpc_server
+      - grpc_config
+      - jaeger
+    networks:
+      - app-network
+
+  celeryworker:
+    container_name: celeryworker
+    build:
+      context: .
+      dockerfile: server/flask.dockerfile
+    command: celery -A app.celery_worker.celery worker --loglevel=info
+    env_file:
+      - server/.env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/postgres
+    depends_on:
+      - flaskapp
+      - db
+      - redis
+    networks:
+      - app-network
+    
+  celerybeat:
+    container_name: celerybeat
+    build:
+      context: .
+      dockerfile: server/flask.dockerfile
+    command: celery -A app.celery_worker.celery beat --loglevel=info
+    env_file:
+      - server/.env
+    environment:
+      - REDIS_URL=redis://redis:6379/0
+      - DATABASE_URL=postgresql://postgres:postgres@db:5432/postgres
+    depends_on:
+      - flaskapp
+      - db
+      - redis
+    networks:
+      - app-network
+
+  flower:
+    image: mher/flower
+    container_name: flower
+    command: celery --broker=redis://redis:6379/0 flower --port=5555
+    ports:
+      - "5555:5555"
+    depends_on:
+      - redis
+      - celeryworker
+    networks:
+      - app-network
+
+
+  frontend:
+    build:
+      context: .  # Путь к вашему фронтенд-приложению
+      dockerfile: client/vite.dockerfile
+    ports:
+      - "3000:3000"
+    depends_on:
+      - flaskapp
+    environment:
+      - VITE_API_URL=http://flaskapp:4000  # окружение для Vite
+    command: npm run dev
+    networks:
+      - app-network
+
+  kibana:
+    image: kibana:7.17.0
+    container_name: kibana
+    depends_on:
+      - elasticsearch
+    ports:
+      - "5601:5601"
+    environment:
+      - ELASTICSEARCH_HOSTS=http://elasticsearch:9200
+    command:
+      - "/usr/share/kibana/bin/kibana"
+      - "--logging.root.level=warn"
+      - "--logging.verbose=false"
+    networks:
+      - app-network
+
+
+
+  redis_exporter:
+    image: oliver006/redis_exporter:latest
+    container_name: redis_exporter
+    environment:
+      - REDIS_ADDR=redis:6379
+    ports:
+      - "9121:9121"
+    networks:
+      - app-network
+
+  postgres_exporter:
+    image: prometheuscommunity/postgres-exporter:latest
+    container_name: postgres_exporter
+    environment:
+      - DATA_SOURCE_NAME=postgresql://postgres:postgres@db:5432/postgres?sslmode=disable
+    ports:
+      - "9187:9187"
+    networks:
+      - app-network
+
+  pushgateway:
+    image: prom/pushgateway:latest
+    container_name: pushgateway
+    ports:
+      - "9091:9091"
+    networks:
+      - app-network
+
+  prometheus:
+    image: prom/prometheus:latest
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    networks:
+      - app-network
+
+  grafana:
+    image: grafana/grafana:latest
+    container_name: grafana
+    user: "472"
+    ports:
+      - "3001:3000"
+    environment:
+      GF_AUTH_ANONYMOUS_ENABLED: "true"
+      GF_AUTH_ANONYMOUS_ORG_ROLE: "Viewer"
+    volumes:
+      - grafana_data:/var/lib/grafana
+      - ./monitoring/dashboards:/var/lib/grafana/dashboards
+    networks:
+      - app-network
+
+
+
+  test:
+    profiles: ["test"]  # ← без указания --profile не запустится
+    build:
+      context: .
+      dockerfile: server/flask.dockerfile
+    working_dir: /app
+    command: pytest
+    environment:
+      REDIS_URL: redis://fake-redis:6379/0
+      LOGSTASH_HOST: fake-logstash
+      CELERY_TASK_ALWAYS_EAGER: 'true'
+      USE_LOGSTASH: 'false'
+    networks:
+      - app-network
+
+
+
+
+volumes:
+  pgdata: {}
+  grafana_data: {}
+
+networks:
+  app-network:
+    driver: bridge
